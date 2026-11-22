@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Placement Day Simulator · OML</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="logo">P</div>
+    <div>
+      <div class="title">Placement Day Simulator</div>
+      <div class="sub">Interview scheduling across three clusters · Optimization Methods in Logistics</div>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="sim" class="active">Simulation</button>
+    <button data-tab="decisions">Decisions</button>
+    <button data-tab="gd">GD days</button>
+    <button data-tab="plan">Plan vs actual</button>
+    <button data-tab="students">Students</button>
+    <button data-tab="results">Results</button>
+    <button data-tab="assumptions">Assumptions</button>
+    <button data-tab="firms">Firms</button>
+    <button data-tab="cohorts">Cohorts</button>
+    <button data-tab="about">How it works</button>
+  </nav>
+</header>
+
+<main>
+  <!-- SIMULATION -->
+  <section id="tab-sim" class="tab active">
+    <div class="simwrap">
+      <div class="stage">
+        <canvas id="canvas" width="1200" height="710"></canvas>
+        <div id="tooltip" class="tooltip hidden"></div>
+        <div id="overlay" class="overlay hidden"></div>
+      </div>
+      <aside class="side">
+        <div class="clockbox">
+          <div class="cluster" id="clusterLabel">Cluster 1</div>
+          <div class="clock" id="clock">8:00 am</div>
+          <div class="modepill" id="modeLabel">Optimised</div>
+        </div>
+        <div class="controls">
+          <button id="btnPlay" class="primary">Play</button>
+          <button id="btnSkipDay" title="Run the rest of this cluster day instantly">Skip day</button>
+          <button id="btnReset" title="Start again with the current settings">Reset</button>
+        </div>
+        <div class="row2">
+          <label>Mode
+            <select id="selMode">
+              <option value="optimised">Optimised</option>
+              <option value="baseline">Baseline (today's practice)</option>
+              <option value="manual">Manual (your firm settings)</option>
+            </select>
+          </label>
+          <label>Speed
+            <select id="selSpeed">
+              <option value="1">1 min / s</option>
+              <option value="3">3 min / s</option>
+              <option value="6" selected>6 min / s</option>
+              <option value="12">12 min / s</option>
+              <option value="30">30 min / s</option>
+              <option value="60">60 min / s</option>
+            </select>
+          </label>
+        </div>
+        <div class="counters" id="counters"></div>
+        <div class="legend">
+          <span><i style="background:var(--c-free)"></i>Waiting</span>
+          <span><i style="background:var(--c-walk)"></i>Walking (via central tracker)</span>
+          <span><i style="background:var(--c-int)"></i>In interview or GD</span>
+          <span><i style="background:var(--c-hold)"></i>Holding</span>
+          <span><i style="background:var(--c-placed)"></i>Placed</span>
+          <span><i style="background:var(--c-dream)"></i>Dreaming</span>
+          <span><i style="background:var(--c-out)"></i>Out of this cluster</span>
+        </div>
+        <div class="loghead">Event log</div>
+        <div class="log" id="log"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- DECISIONS -->
+  <section id="tab-decisions" class="tab">
+    <div class="pagehead">
+      <h2>Decisions made before each cluster</h2>
+      <p>Everything fixed the night before a cluster: each firm's shortlist, when it opens, how many panels it gets and which rooms. Baseline is today's practice; Optimised is the model's plan. Both are worked out on the same applications and shortlists, so the only difference is the scheduling decision. The run on the Simulation tab uses the mode you picked there.</p>
+      <div class="row-inline">
+        <label>Cluster <select id="decCluster"></select></label>
+        <label>Opening schedule for <select id="decMode"></select></label>
+        <label>Search <input id="decSearch" type="search" placeholder="Company or role"></label>
+        <button id="btnDecCsv">Download as CSV</button>
+      </div>
+    </div>
+    <div id="decSummary"></div>
+    <div class="card">
+      <h3>Opening schedule</h3>
+      <p class="muted" id="decScheduleNote"></p>
+      <div class="tablewrap"><table id="decSchedule" class="data"></table></div>
+    </div>
+    <div class="card">
+      <h3>Every firm: baseline against optimised</h3>
+      <div class="tablewrap"><table id="decTable" class="data"></table></div>
+    </div>
+  </section>
+
+  <!-- GD DAYS -->
+  <section id="tab-gd" class="tab">
+    <div class="pagehead">
+      <h2>Group discussion days</h2>
+      <p>Clusters 2 and 3 each have a GD day the day before. A firm that holds a GD runs one GD process for all its roles: it screens everyone who applied to any of those roles once, and calls twice as many students as its roles' interview shortlists would add up to (at least one full group). The GD is the first cut: a student not called to the GD cannot be interviewed by that firm. After the GD each role draws its hotlist and shortlist from GD attendees who applied to it, and if it runs short on the day it extends only to other GD attendees, best GD performance first. Attendance is compulsory and a student can be invited to any number of GDs, so no student may be in two GDs at once. GDs are held in the two syndicate rooms either side of the Placecom desk at each wing entrance (18 rooms). A company runs its GDs as one block in one wing with one or two panels, because its Placecom volunteer stays in that wing, and a room passes to the next company only after a one-hour gap (editable). No company starts its GDs after 6 pm, and the optimiser pulls the most popular companies to the start of the day (both editable on the Assumptions tab). After the GD each firm is one step more confident: defensive becomes competing, competing becomes confident, and confident cuts its list from 2X to 1.5X. Firms without a GD go straight to their hotlist and shortlist, and extend to any remaining applicant.</p>
+      <div class="row-inline">
+        <label>GD day before <select id="gdCluster"></select></label>
+        <label>Timetable shown <select id="gdMode"><option value="optimised">Optimised</option><option value="baseline">Baseline</option></select></label>
+        <button id="btnGdCsv">Download as CSV</button>
+      </div>
+    </div>
+    <div id="gdEmpty" class="card muted"></div>
+    <div id="gdSummary"></div>
+    <div class="card">
+      <h3>GD rooms through the day</h3>
+      <p class="muted" id="gdGanttNote"></p>
+      <div class="tablewrap" id="gdGantt"></div>
+    </div>
+    <div class="card">
+      <h3>Every company</h3>
+      <div class="tablewrap"><table id="gdTable" class="data"></table></div>
+    </div>
+  </section>
+
+  <!-- PLAN -->
+  <section id="tab-plan" class="tab">
+    <div class="pagehead">
+      <h2>Plan vs actual</h2>
+      <p>The pre-day plan fixes each firm's open time, panels and rooms. Outlined bars are the plan; filled bars are what actually happened on the day. Every cluster and GD day already run stays available here.</p>
+    </div>
+    <div class="row-inline"><label>Show <select id="planView"></select></label><span id="planSummary" class="muted"></span></div>
+    <div class="gantt-wrap"><canvas id="gantt" width="1200" height="400"></canvas></div>
+    <div class="tablewrap"><table id="planTable" class="data"></table></div>
+  </section>
+
+  <!-- STUDENTS -->
+  <section id="tab-students" class="tab">
+    <div class="pagehead">
+      <h2>Students</h2>
+      <p>The central tracker, student by student: when each student was sent for a GD or interview, where, when they came back and what came of it. Pick a round to see its schedule, or switch to the movement log to see every send in time order. Click a name for the full history.</p>
+    </div>
+    <div class="row-inline">
+      <label>Round <select id="stuRound">
+        <option value="all">All rounds</option><option value="c1pi">Cluster 1</option><option value="c2gd">Cluster 2 GD</option><option value="c2pi">Cluster 2 PI</option><option value="c3gd">Cluster 3 GD</option><option value="c3pi">Cluster 3 PI</option>
+      </select></label>
+      <label>View <select id="stuView"><option value="student">By student</option><option value="log">Movement log (time order)</option></select></label>
+      <label>Status now <select id="stuStatus"><option value="all">All</option><option value="free">Waiting / no offer yet</option><option value="hold">Holding</option><option value="placed">Placed</option><option value="dream">Dreaming</option><option value="out">Out of this cluster</option><option value="busy">In a GD or interview, or walking</option></select></label>
+      <label>Find <input id="stuFind" type="search" placeholder="Student or company" style="width:14em"></label>
+      <button id="btnStuRoster">Edit students</button>
+      <span id="stuCount" class="muted"></span>
+    </div>
+    <div id="stuRosterCard" class="card" style="display:none">
+      <h3>Student roster</h3>
+      <p class="muted">Edit any student, add a new one or remove one with ✕. CV strength is the common score firms see (in standard deviations; 0 is average). Preference spread overrides the batch value for this student; a favourite cohort adds the bonus to the student's liking for every role in it; applies-to share fixes the share of each cluster's roles the student applies to. Blank cells use the model's random values. Changes take effect when you press <b>Apply and restart</b>.</p>
+      <div class="row-inline">
+        <label>Find <input id="rosterFind" type="search" placeholder="Student name" style="width:12em"></label>
+        <button id="btnAddStudent">Add student</button>
+        <button id="btnApplyStudents" class="primary">Apply and restart</button>
+        <button id="btnRestoreStudents" style="display:none">Restore removed students</button>
+        <button id="btnResetStudents">Clear student edits</button>
+        <span id="rosterDirty" class="muted"></span>
+      </div>
+      <div class="tablewrap"><table id="stuRoster" class="data editable"></table></div>
+    </div>
+    <div class="legend stulegend">
+      <span><i style="background:var(--c-free)"></i>Waiting / no offer yet</span>
+      <span><i style="background:var(--c-walk)"></i>Walking (via central tracker)</span>
+      <span><i style="background:var(--c-int)"></i>In interview or GD</span>
+      <span><i style="background:var(--c-hold)"></i>Holding</span>
+      <span><i style="background:var(--c-placed)"></i>Placed</span>
+      <span><i style="background:var(--c-dream)"></i>Dreaming</span>
+      <span><i style="background:var(--c-out)"></i>Out of this cluster</span>
+    </div>
+    <div id="stuSummary"></div>
+    <div id="stuDetail"></div>
+    <div class="tablewrap"><table id="stuTable" class="data"></table></div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="tab-results" class="tab">
+    <div class="pagehead">
+      <h2>Results</h2>
+      <p>Metrics for the current run, cluster by cluster. Use the comparison to run several placements in each mode on the same random seeds.</p>
+    </div>
+    <div id="resultsCurrent"></div>
+    <div class="card">
+      <h3>Compare modes</h3>
+      <div class="row-inline">
+        <label>Runs per mode <input id="cmpRuns" type="number" min="1" max="50" value="5"></label>
+        <label><input id="cmpManual" type="checkbox"> Include manual mode</label>
+        <button id="btnCompare" class="primary">Run comparison</button>
+        <span id="cmpProgress" class="muted"></span>
+      </div>
+      <div class="row-inline"><label>Show <select id="cmpView" disabled><option value="season">Whole season</option></select></label></div>
+      <div id="cmpResults"></div>
+    </div>
+    <div class="card">
+      <h3>Planning × matching (2×2 experiment)</h3>
+      <p class="muted">Runs all four combinations of baseline or optimised pre-day planning with baseline or optimised live matching on the same seeds, with cohort allocation and GD timetables held fixed. Each seed is a pair across the four cells, so effects are paired differences with 95% t intervals. Event-keyed random numbers give every cell the same luck for the same event; the legacy stream reproduces the report's numbers. Runs in a background worker; large experiments are better run with <code>tools/experiment.js</code> and imported here.</p>
+      <div class="row-inline">
+        <label>Seeds <input id="x2Runs" type="number" min="2" max="200" value="10" style="width:5em"></label>
+        <label>First seed <input id="x2Seed" type="number" value="1001" style="width:6em"></label>
+        <label>Scope <select id="x2Scope"><option value="season">Full season</option><option value="c1">Cluster 1 only</option></select></label>
+        <label>Random numbers <select id="x2Rng"><option value="1">Event-keyed (common random numbers)</option><option value="0">Legacy stream</option></select></label>
+        <button id="btnX2" class="primary">Run 2×2</button>
+        <button id="btnX2Stop">Stop</button>
+        <label class="filebtn">Import results <input id="x2Import" type="file" accept="application/json,.json"></label>
+        <button id="btnX2Export">Download runs</button>
+        <span id="x2Progress" class="muted"></span>
+      </div>
+      <div class="row-inline"><label>Show <select id="x2View" disabled><option value="season">Whole season</option></select></label></div>
+      <div id="x2Results"></div>
+    </div>
+  </section>
+
+  <!-- ASSUMPTIONS -->
+  <section id="tab-assumptions" class="tab">
+    <div class="pagehead">
+      <h2>Assumptions</h2>
+      <p>Every default below drives the simulation. Change any value, then apply to restart with the new settings.</p>
+      <div class="row-inline">
+        <button id="btnApplyParams" class="primary">Apply and restart</button>
+        <button id="btnResetParams">Restore defaults</button>
+        <button id="btnExport">Export settings</button>
+        <label class="filebtn">Import settings<input id="fileImport" type="file" accept="application/json"></label>
+      </div>
+    </div>
+    <div class="card" id="sensCard">
+      <h3>Sensitivity analysis</h3>
+      <p class="muted">Pick one input, a range and the outputs to watch. Each point runs complete placements in the background, using the values currently in the form below (applied or not) and changing only the chosen input. You can also click the small chart button beside any assumption.</p>
+      <div class="row-inline">
+        <label>Input <select id="sensKey"></select></label>
+        <label>From <input id="sensFrom" type="text" style="width:84px"></label>
+        <label>To <input id="sensTo" type="text" style="width:84px"></label>
+        <label>Points <input id="sensPoints" type="number" min="2" max="15" value="6" style="width:56px"></label>
+        <label>Runs per point <input id="sensRuns" type="number" min="1" max="20" value="2" style="width:56px"></label>
+        <label><input type="checkbox" id="sensBase" checked> Baseline</label>
+        <label><input type="checkbox" id="sensOpt" checked> Optimised</label>
+        <label><input type="checkbox" id="sensMan"> Manual</label>
+        <button id="btnSens" class="primary">Plot sensitivity</button>
+        <span id="sensProgress" class="muted"></span>
+      </div>
+      <div class="sensout"><span class="muted">Outputs to plot:</span> <span id="sensOutputs"></span></div>
+      <div id="sensLegend" class="senslegend"></div>
+      <div id="sensCharts" class="sensgrid"></div>
+      <div id="sensTableWrap"></div>
+    </div>
+    <div id="paramForm" class="paramgrid"></div>
+    <div class="card">
+      <h3>Accept, hold and reject by position on the student's cluster list</h3>
+      <div id="curveTable"></div>
+    </div>
+  </section>
+
+  <!-- FIRMS -->
+  <section id="tab-firms" class="tab">
+    <div class="pagehead">
+      <h2>Firms and roles</h2>
+      <p>Edit any value of any role, including the company, role name, cohort and cluster. Add a role with <b>Add role</b> (it joins the cluster selected in the filter) and remove one with ✕; type a new cohort name to create a cohort. Blank manual open time or panels means the optimiser decides; manual values are used in Manual mode. The GD columns at the right set which cluster 2 and 3 roles hold a group discussion, its length and group size; roles of the same company share one GD. Changes take effect when you press <b>Apply and restart</b>.</p>
+      <div class="row-inline">
+        <label>Cluster <select id="firmCluster"><option value="0">All</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+        <label>Search <input id="firmSearch" type="search" placeholder="Company or role"></label>
+        <button id="btnAddFirm">Add role</button>
+        <button id="btnApplyFirms" class="primary">Apply and restart</button>
+        <button id="btnRestoreFirms" style="display:none">Restore removed roles</button>
+        <button id="btnResetFirms">Clear all firm edits</button>
+        <span id="firmDirty" class="muted"></span>
+      </div>
+    </div>
+    <datalist id="firmCohorts"></datalist>
+    <div class="tablewrap"><table id="firmTable" class="data editable"></table></div>
+  </section>
+
+  <!-- COHORTS -->
+  <section id="tab-cohorts" class="tab">
+    <div class="pagehead">
+      <h2>Cohorts and clusters</h2>
+      <p>Each company sits in one cohort by its core business, and the whole cohort comes in one cluster. Move cohorts between clusters to test non-optimal allocations.</p>
+      <div class="row-inline">
+        <button id="btnPractice">Apply practice rule (by batch preference, thirds)</button>
+        <button id="btnDefaultCohorts">Restore 2026&ndash;27 split</button>
+        <button id="btnApplyCohorts" class="primary">Apply and restart</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Solve the allocation as a 0-1 programme (branch and bound)</h3>
+      <p class="muted">Each cohort goes to exactly one cluster. The objective rewards putting preferred cohorts earlier, weighted by their number of roles: the sum over cohorts of (4 &minus; cluster) &times; average popularity &times; roles. Caps keep each cluster within the rooms available. Every LP relaxation is solved by the simplex method; nodes are explored depth-first, taking the y = 1 branch first, and fathomed by bound, by integrality or by infeasibility.</p>
+      <div class="row-inline">
+        <label>Max roles per cluster <input id="ipMaxRoles" type="number" min="1" value="80" style="width:70px"></label>
+        <label>Max hires per cluster <input id="ipMaxHires" type="number" min="1" placeholder="no cap" style="width:80px"></label>
+        <button id="btnSolveIP" class="primary">Solve by branch and bound</button>
+        <span id="ipStatus" class="muted"></span>
+      </div>
+      <div id="ipResult"></div>
+    </div>
+    <div id="cohortTotals" class="totals"></div>
+    <div class="tablewrap"><table id="cohortTable" class="data"></table></div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="tab-about" class="tab">
+    <div class="pagehead"><h2>How it works</h2></div>
+    <div class="card prose" id="aboutText"></div>
+  </section>
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/experiment.js"></script>
+<script src="js/render.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
