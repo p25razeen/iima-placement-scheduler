@@ -15,6 +15,10 @@ A browser-based simulator of IIM Ahmedabad summer placements, with four optimisa
 
 Every mode (baseline = stylised current practice, optimised, manual) runs on the same synthetic students, so differences in outcome are caused by the schedule. Offer targets and dream behaviour are calibrated to the audited IPRS report for Summers 2026.
 
+## Two ways to use this project
+1. **Use the deployed simulator, nothing to install.** Open **https://iima-placement-scheduler.netlify.app** in any modern browser (Chrome, Edge, Firefox or Safari on a laptop). Everything runs in your browser and no data is sent anywhere. This is the quickest way to watch a placement day, compare the baseline with the optimised schedule and run the experiments.
+2. **Read, run or extend the code.** Download this repository (Code → Download ZIP, or `git clone https://github.com/p25razeen/iima-placement-scheduler`) and open `index.html` in a browser; there is no build step. The models are in `js/engine.js`: the cohort allocation (branch and bound), the pre-day plan (wing packing and improvement), the GD timetable (insertion with b-matching) and the live calling (Hungarian method). The Files section below says where everything else lives, and `tools/experiment.js` runs batches from the command line. Later batches and Placecom are welcome to adapt it to their own season: firms, cohorts and students are editable in the site itself, and every parameter is on the Assumptions tab.
+
 ## Using it
 No installation: open the live site, or open `index.html` from this folder in any modern browser. It opens with the base settings and the base run's seed (288).
 
