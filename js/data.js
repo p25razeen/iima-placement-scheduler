@@ -29,3 +29,25 @@ PS.COHORT_CLUSTER = {
 "Financial technology": 3
 };
 
+
+// ------------------------------------------------------------------ firm names
+// Set HIDE_FIRM_NAMES to true to deploy with every company shown under a neutral alias (e.g. "Management consulting
+// firm 3"). Visitors can also switch it on the Firms tab. The real name is kept only as a hidden key, so simulated
+// outcomes are identical with names shown or hidden. To remove the names altogether, replace "company" in PS.ROLES above.
+PS.HIDE_FIRM_NAMES = false;
+PS.applyFirmAliases = function () {
+  if (PS.namesHidden) return;
+  const byCohort = {}, alias = {};
+  const comps = []; const seen = new Set();
+  for (const r of PS.ROLES) if (!seen.has(r.company)) { seen.add(r.company); comps.push(r); }
+  comps.sort((a, b) => b.pop - a.pop || (a.id < b.id ? -1 : 1));
+  for (const r of comps) { const n = (byCohort[r.cohort] = (byCohort[r.cohort] || 0) + 1); alias[r.company] = r.cohort + ' firm ' + n; }
+  for (const r of PS.ROLES) { r.hashKey = r.company; r.company = alias[r.company]; }
+  PS.namesHidden = true;
+};
+(function () {
+  let hide = PS.HIDE_FIRM_NAMES;
+  try { const v = window.localStorage && window.localStorage.getItem('ps-hide-names'); if (v === '1') hide = true; if (v === '0') hide = false; } catch (e) { /* no storage */ }
+  try { const q = new URLSearchParams(window.location && window.location.search || ''); if (q.get('hidenames') === '1') hide = true; } catch (e) { /* not in a browser */ }
+  if (hide) PS.applyFirmAliases();
+})();

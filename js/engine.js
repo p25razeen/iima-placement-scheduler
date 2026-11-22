@@ -98,16 +98,16 @@ window.PS = window.PS || {};
     return P;
   };
 
-  // ------------------------------------------------------------------ wings and floors (IIMA new campus: wings 2 and 3 on the ground floor, 6-8 on the first, 9-12 on the second)
-  PS.WING_LABELS = ['2', '3', '6', '7', '8', '9', '10', '11', '12'];
+  // ------------------------------------------------------------------ blocks and floors (blocks A and B on the ground floor, C-E on the first, F-I on the second)
+  PS.WING_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
   PS.FLOOR_NAMES = ['Ground floor', 'First floor', 'Second floor'];
-  PS.wingLabel = (w) => w < PS.WING_LABELS.length ? PS.WING_LABELS[w] : String(13 + w - PS.WING_LABELS.length);
+  PS.wingLabel = (w) => w < PS.WING_LABELS.length ? PS.WING_LABELS[w] : String.fromCharCode(65 + w);
   PS.wingFloor = (w) => (w < 2 ? 0 : w < 5 ? 1 : 2);
-  PS.roomName = (r) => r ? 'Wing ' + PS.wingLabel(r.wing) + ' · room ' + (r.slot + 1) : 'buffer room';
+  PS.roomName = (r) => r ? 'Block ' + PS.wingLabel(r.wing) + ' · room ' + (r.slot + 1) : 'buffer room';
   PS.roomsText = (rooms, open) => {
     const by = new Map(); let buf = 0;
     for (const r of rooms) { if (!r) { buf++; continue; } if (!by.has(r.wing)) by.set(r.wing, []); by.get(r.wing).push(r); }
-    const parts = [...by.entries()].sort((a, b) => a[0] - b[0]).map(([w, sl]) => 'W' + PS.wingLabel(w) + ': ' + sl.sort((a, b) => a.slot - b.slot).map(r => (r.slot + 1) + (open != null && r.from != null && r.from > open ? ' from ' + PS.fmtTime(r.from) : '')).join(', '));
+    const parts = [...by.entries()].sort((a, b) => a[0] - b[0]).map(([w, sl]) => 'Block ' + PS.wingLabel(w) + ': ' + sl.sort((a, b) => a.slot - b.slot).map(r => (r.slot + 1) + (open != null && r.from != null && r.from > open ? ' from ' + PS.fmtTime(r.from) : '')).join(', '));
     if (buf) parts.push(buf + ' buffer');
     return parts.join(' · ');
   };
@@ -250,7 +250,7 @@ window.PS = window.PS || {};
       // firms
       this.firms = roleIdx.map(i => {
         const r = R[i];
-        return { idx: i, role: r, name: r.company, label: r.company + ' – ' + r.role, X: Math.max(1, Math.round(r.X)), popPct: Math.min(1, pct(r.pop)),
+        return { idx: i, role: r, name: r.company, hashKey: r.hashKey || r.company, label: r.company + ' – ' + r.role, X: Math.max(1, Math.round(r.X)), popPct: Math.min(1, pct(r.pop)),
           applicants: [], list: [], onList: new Map(), state: 'planned', accepted: 0, held: new Set(), panels: [], r2q: [],
           done: new Set(), interviews: 0, offers: 0, rejectsRecv: 0, holdsReleased: 0, lostHires: 0, lostToDream: 0, idle: 0, extensions: 0,
           planOpen: 0, planPanels: 1, planRooms: [], planClose: 0, actualOpen: null, actualClose: null, bufferRooms: 0 };
@@ -323,7 +323,7 @@ window.PS = window.PS || {};
 
     // ---------------------------------------------------------------- group discussions (the day before clusters 2 and 3)
     // Firms with a GD invite their whole CV shortlist (one GD process per company, covering all its roles). Attendance is
-    // compulsory. After the GD each role becomes one step more confident and rebuilds its hotlist and shortlist from
+    // compulsory. After the GD each role becomes one step more confident and rebuilds its preferred list and shortlist from
     // attendees, ranked on a sharper GD signal. Which students are selected does not depend on when their GD was held,
     // so the GD timetable is scheduled separately (its own random stream) and judged on its own metrics.
     runGd(k) {
@@ -331,7 +331,7 @@ window.PS = window.PS || {};
       for (const f of this.firms) {
         if (!f.role.gd) continue;
         let c = comps.get(f.name);
-        if (!c) { c = { name: f.name, firms: [], len: 0, min: Infinity, max: Infinity, pop: 0, invitees: [] }; comps.set(f.name, c); }
+        if (!c) { c = { name: f.name, hashKey: f.hashKey || f.name, firms: [], len: 0, min: Infinity, max: Infinity, pop: 0, invitees: [] }; comps.set(f.name, c); }
         c.firms.push(f); c.len = Math.max(c.len, +f.role.gdLen || 30); c.pop = Math.max(c.pop, f.role.pop);
         if (f.role.gdMin) c.min = Math.min(c.min, +f.role.gdMin); if (f.role.gdMax) c.max = Math.min(c.max, +f.role.gdMax);
       }
@@ -344,7 +344,7 @@ window.PS = window.PS || {};
         const seen = new Set(), pool = new Set(); let seats = 0;
         for (const f of c.firms) { seats += f.listSize; for (const e of f.list) seen.add(e.id); for (const id of f.applicants) pool.add(id); }
         c.roleListsSum = seats; c.roleListsUnion = seen.size; c.pool = pool.size;
-        const ch = strHash(c.name); const cv = [...pool].map(id => ({ id, sc: this.students[id].strength + this.rn(K.ccv, id, ch) * P.firmNoise })).sort((a, b) => b.sc - a.sc);
+        const ch = strHash(c.hashKey || c.name); const cv = [...pool].map(id => ({ id, sc: this.students[id].strength + this.rn(K.ccv, id, ch) * P.firmNoise })).sort((a, b) => b.sc - a.sc);
         c.invitees = cv.slice(0, Math.min(cv.length, Math.max(Math.round(seats * P.gdInviteMult), Math.round(P.gdSizeMax)))).map(x => x.id); // at least one full group
         const gdScore = new Map(); for (const id of c.invitees) gdScore.set(id, this.students[id].strength + P.firmNoise * P.gdNoise * this.rn(K.gd, id, ch));
         c.gdScore = gdScore;
@@ -374,7 +374,7 @@ window.PS = window.PS || {};
         const where = new Map(); for (const g of use.groups) for (const id of g.members) where.set(g.comp + '|' + id, g);
         for (const c of live) for (const id of c.invitees) {
           const st = this.students[id]; st.hist = st.hist || []; const g = where.get(c.name + '|' + id);
-          const lists = c.firms.map(f => { const e = f.onList.get(id); return e ? f.role.role + (e.hot ? ' (hotlist)' : ' (shortlist)') : null; }).filter(Boolean);
+          const lists = c.firms.map(f => { const e = f.onList.get(id); return e ? f.role.role + (e.hot ? ' (preferred list)' : ' (standard list)') : null; }).filter(Boolean);
           st.hist.push({ k, type: 'GD', company: c.name, sent: g ? g.start - P.transit : null, start: g ? g.start : null, end: g ? g.end : null, back: g ? g.end + P.transit : null,
             wing: g ? g.wing : null, slot: g ? g.slot : null, size: g ? g.size : null,
             outcome: !g ? 'Invited, no group formed' : lists.length ? 'Listed for ' + lists.join(', ') : 'Not listed after GD' });
@@ -413,10 +413,10 @@ window.PS = window.PS || {};
       return { value: Math.max(total, perComp, perStudent), byRooms: total, byFirm: perComp, byStudent: perStudent, maxGdsPerStudent: Math.max(0, ...[...load.values()].map(l => l.n)) };
     }
 
-    // Block scheduling of the GD day. A company gets k panels (1 or 2) in ONE wing (its Placecom volunteer cannot move
-    // between wings) and runs its groups there as one block. A room is handed to the next company only gdSwitch minutes
+    // Block scheduling of the GD day. A company gets k panels (1 or 2) in ONE block (its the placement committee volunteer cannot move
+    // between blocks) and runs its groups there as one sitting. A room is handed to the next company only gdSwitch minutes
     // after the previous company's last group in it; between groups of the same company the room needs gdTurnover.
-    // Both modes first build a timetable (which company, which wing, when, and who sits in which group), then the day is
+    // Both modes first build a timetable (which company, which block, when, and who sits in which group), then the day is
     // played out minute by minute with random GD lengths: a group starts once its room is ready and all its members are free.
     scheduleGd(C, mode, k) {
       const P = this.P, rng = RNG((P.seed + 1) * 7919 + k * 104729);
@@ -424,9 +424,9 @@ window.PS = window.PS || {};
       const S = C.map(c => ({ c, pl: this.gdPanelPlan(c, mode), planned: [], plannedStart: null, plannedEnd: null, wing: null }));
       const roomQ = wings.flat().map(() => []);
       if (mode === 'baseline') {
-        // today's practice: company blocks in popularity order, the next company in a room timetabled gdBuffer after the
+        // today's practice: company sittings in popularity order, the next company in a room timetabled gdBuffer after the
         // block's planned end; groups made in list order and dealt to the company's panels in turn
-        // if the buffer would push a company past the latest start, Placecom squeezes it in after the one-hour gap instead
+        // if the buffer would push a company past the latest start, the placement committee squeezes it in after the one-hour gap instead
         const plan = roomQ.map(() => 0), tight = roomQ.map(() => 0);
         for (const st of S.slice().sort((a, b) => b.c.pop - a.c.pop)) {
           const pick = (arr) => { let best = null; for (const W of wings) { const rs = W.slice().sort((a, b) => arr[a.idx] - arr[b.idx]).slice(0, st.pl.k); if (rs.length < st.pl.k) continue; const t0 = Math.max(...rs.map(r => arr[r.idx])); if (!best || t0 < best.t0) best = { t0, rs }; } return best; };
@@ -437,7 +437,7 @@ window.PS = window.PS || {};
         }
       } else {
         // optimised timetable, built by a greedy insertion heuristic run from several company orders (multi-start):
-        // each company in turn takes the earliest start, in 5-minute steps, at which some wing has its panels free AND every
+        // each company in turn takes the earliest start, in 5-minute steps, at which some block has its panels free AND every
         // invitee can be placed in one of its rounds without clashing with GDs already timetabled (a b-matching of students
         // to rounds, solved by augmenting paths). Rounds are spaced at the GD length plus one standard deviation, plus
         // turnover, so the timetable absorbs most overruns. The order that finishes earliest is kept.
@@ -475,7 +475,7 @@ window.PS = window.PS || {};
               };
               let ok = true; for (const i of order) if (!tryS(i, new Array(rounds).fill(0))) { ok = false; break; }
               if (!ok) continue;
-              // best fit: the wing whose panels came free most recently, leaving earlier-free wings for others
+              // best fit: the block whose panels came free most recently, leaving earlier-free blocks for others
               const rs = opts.sort((a, b) => Math.min(...b.map(prevEnd)) - Math.min(...a.map(prevEnd)))[0];
               done = { t, rs, mem, starts };
             }
@@ -521,7 +521,7 @@ window.PS = window.PS || {};
       // ---- play the day out
       const free = new Map(); for (const c of C) for (const id of c.invitees) free.set(id, 0);
       const crn = this.crn, gseed = P.seed, gcount = new Map();
-      const dur = (c) => { const i = (gcount.get(c.name) || 0); gcount.set(c.name, i + 1); return Math.max(0.5 * c.len, c.len * (1 + P.gdCv * (crn ? keyN(gseed, K.gddur, k, strHash(c.name), i) : rng.normal()))); };
+      const dur = (c) => { const i = (gcount.get(c.name) || 0); gcount.set(c.name, i + 1); return Math.max(0.5 * c.len, c.len * (1 + P.gdCv * (crn ? keyN(gseed, K.gddur, k, strHash(c.hashKey || c.name), i) : rng.normal()))); };
       const rooms = wings.flat().map(r => ({ ...r, busy: null, readyAt: 0, lastComp: null, lastEnd: -1e9 }));
       const groups = []; let clashWait = 0, clashGroups = 0;
       for (let t = 0; t < 3000; t++) {
@@ -554,7 +554,8 @@ window.PS = window.PS || {};
       return {
         end, groups: groups.map(g => ({ comp: g.comp, wing: g.room.wing, slot: g.room.slot, start: g.start, end: g.end, size: g.size, members: g.members })),
         nGroups: groups.length, clashWait, clashGroups, lateGroups: groups.filter(g => g.end > P.gdDayEnd).length,
-        panelIdle: S.reduce((a, st) => a + st.idle, 0), twoPanel: S.filter(st => st.pl.k === 2).length,
+        panelIdle: S.reduce((a, st) => a + st.idle, 0), panelTime: S.reduce((a, st) => a + (st.end != null && st.start != null ? st.pl.k * (st.end - st.start) : 0), 0),
+        util: (() => { const pt = S.reduce((a, st) => a + (st.end != null && st.start != null ? st.pl.k * (st.end - st.start) : 0), 0); return pt ? 100 * (1 - S.reduce((a, st) => a + st.idle, 0) / pt) : 0; })(), twoPanel: S.filter(st => st.pl.k === 2).length,
         latePlanned: S.filter(st => st.lateGd).length, lateTwoPanel: S.filter(st => st.lateGd && st.pl.k === 2).length, lateOnePanel: S.filter(st => st.lateGd && st.pl.k < 2).length, lateActual: S.filter(st => st.start != null && st.start > P.gdLatestStart).length,
         roomHours: groups.reduce((a, g) => a + (g.end - g.start), 0) / 60,
         perComp: S.map(st => ({ name: st.c.name, start: st.start, end: st.end, groups: st.groups, panels: st.pl.k, wing: st.wing, rooms: st.pl.k, maxRooms: st.pl.k, idle: Math.round(st.idle), left: st.left, plannedStart: st.plannedStart, plannedEnd: st.plannedEnd, late: !!st.lateGd })),
@@ -578,10 +579,10 @@ window.PS = window.PS || {};
 
     // ---------------------------------------------------------------- opening times from preferences (release dates)
     // A shortlisted student is "ready" for firm f once they are likely to have finished every interview with a firm
-    // they rank above f (a release date in scheduling terms). A free hotlisted candidate counts as 1 and a free
+    // they rank above f (a release date in scheduling terms). A free preferred candidate counts as 1 and a free
     // shortlisted candidate as shortlistWeight (default 1/3). Firm f opens at the first half-hour by which its free
-    // candidates add up to one hotlist-equivalent per planned panel: N panels open on N free hotlisted candidates,
-    // or on 3N free shortlisted ones, or any mix worth N.
+    // candidates add up to one preferred list-equivalent per planned panel: N panels open on N free preferred candidates,
+    // or on 3N free standard-list ones, or any mix worth N.
     computeReleaseTimes() {
       const P = this.P, F = this.firms;
       for (const f of F) {
@@ -608,7 +609,7 @@ window.PS = window.PS || {};
           const total = ready.reduce((a, r) => a + r.w, 0);
           const need = Math.max(Math.min(1, total), Math.min(f.optK, total));
           let acc = 0, t = 0;
-          for (const r of ready) { acc += r.w; t = r.t; if (acc >= need - 1e-3) break; } // tolerance: three shortlisted at 0.3333 count as one hotlisted
+          for (const r of ready) { acc += r.w; t = r.t; if (acc >= need - 1e-3) break; } // tolerance: three shortlisted at 0.3333 count as one preferred
           f.releaseTime = clamp(Math.floor(t / 30) * 30, 0, P.openLatest);
           f.releaseNeed = need; f.hotAt8 = ready.filter(r => r.t <= 0 && r.hot).length; f.shortAt8 = ready.filter(r => r.t <= 0 && !r.hot).length;
           f.readyAt8 = f.hotAt8 + P.shortlistWeight * f.shortAt8;
@@ -628,9 +629,9 @@ window.PS = window.PS || {};
 
       if (mode === 'baseline') {
         // today's practice: everyone opens at 8 am with panels in proportion to list size and keeps its rooms until filled.
-        // Firms are seated in popularity order, each in the first wing with enough free rooms (first fit, one wing per role).
-        // If no wing has that many rooms left, the firm goes to the wing with most rooms left and its other panels use
-        // that wing's buffer rooms on the day.
+        // Firms are seated in popularity order, each in the first block with enough free rooms (first fit, one block per role).
+        // If no block has that many rooms left, the firm goes to the block with most rooms left and its other panels use
+        // that block's buffer rooms on the day.
         const total = F.reduce((a, f) => a + f.listSize, 0) || 1; const cap = planned.length;
         F.forEach(f => { f.planPanels = clamp(Math.round(cap * f.listSize / total), 1, pw); });
         let sum = F.reduce((a, f) => a + f.planPanels, 0);
@@ -648,7 +649,7 @@ window.PS = window.PS || {};
         return;
       }
       // optimised (and manual, which starts from it): panels by Little's law, opening times from release dates, then the
-      // firms are packed into wings (one wing per role) and the packing is improved
+      // firms are packed into blocks (one block per role) and the packing is improved
       if (P.openFromPrefs) this.computeReleaseTimes();
       for (const f of F) {
         const flowCap = Math.max(1, Math.floor(f.listSize / 3));
@@ -670,17 +671,17 @@ window.PS = window.PS || {};
       this.planStats = res.improve; this.packStats = res.stats;
     }
 
-    // ---------------------------------------------------------------- one-wing packing of the pre-day plan
-    // Two-dimensional bin packing with shelves. A wing is a bin: roomsPerWingPlanned rooms (its width) by the day (its
-    // height). A firm with k panels for D minutes is a k x D rectangle that must sit inside one wing, because its Placecom
-    // volunteer stays in one wing. A room holds at most two bookings, a morning one that ends by reuseCloseBy and an
-    // afternoon one from reuseOpenFrom, so every wing has a morning shelf and an afternoon shelf; an all-day booking
+    // ---------------------------------------------------------------- one-block packing of the pre-day plan
+    // Two-dimensional bin packing with shelves. A block is a bin: roomsPerWingPlanned rooms (its width) by the day (its
+    // height). A firm with k panels for D minutes is a k x D rectangle that must sit inside one block, because its the placement committee
+    // volunteer stays in one block. A room holds at most two bookings, a morning one that ends by reuseCloseBy and an
+    // afternoon one from reuseOpenFrom, so every block has a morning shelf and an afternoon shelf; an all-day booking
     // takes a room on both shelves. Construction is best-fit decreasing with bottom-left placement: firms are taken in a
-    // given order (largest area first, and other orders), and each goes to the (wing, panels, start) with the lowest
-    // cost, the earliest start at or after its release for every wing and panel count; ties go to a wing already in use
-    // (so new wings are opened only when needed), then to the wing left with the least free room-time (best fit). Each
-    // packing is improved inside its wings (savings for noon handovers, earlier openings, panel moves). The best order is
-    // kept, and then the number of wings is cut one at a time while the plan's cost stays within wingSlack of the best.
+    // given order (largest area first, and other orders), and each goes to the (block, panels, start) with the lowest
+    // cost, the earliest start at or after its release for every block and panel count; ties go to a block already in use
+    // (so new blocks are opened only when needed), then to the block left with the least free room-time (best fit). Each
+    // packing is improved inside its blocks (savings for noon handovers, earlier openings, panel moves). The best order is
+    // kept, and then the number of blocks is cut one at a time while the plan's cost stays within wingSlack of the best.
     packWings(F, mode) {
       const P = this.P, pw = P.roomsPerWingPlanned, nWings = P.wings;
       const W = f => f.expInt * f.meanDur;
@@ -706,10 +707,10 @@ window.PS = window.PS || {};
         return { rooms: rs, apply() { for (const x of firms) Object.assign(x.f, { planOpen: x.planOpen, planPanels: x.planPanels, planClose: x.planClose, unplaced: x.unplaced, planWing: x.planWing, handsOver: x.handsOver, planRooms: x.planRooms.map(r => r ? Object.assign({}, r) : null) }); } };
       };
       const morning = f => f.desired < P.reuseOpenFrom;
-      // stage 1, wing assignment: longest processing time first (Graham's LPT rule for balancing machines). Firms are
-      // taken by workload, largest first, and each goes to the least-loaded wing that still has a room free for it at the
-      // start of its window (at most pw firms open in a wing before noon, and at most pw after it). Balancing matters
-      // because a wing's small morning firms hand their rooms to its large firm at noon.
+      // stage 1, block assignment: longest processing time first (Graham's LPT rule for balancing machines). Firms are
+      // taken by workload, largest first, and each goes to the least-loaded block that still has a room free for it at the
+      // start of its window (at most pw firms open in a block before noon, and at most pw after it). Balancing matters
+      // because a block's small morning firms hand their rooms to its large firm at noon.
       const assign = (nW, order) => {
         const load = new Array(nW).fill(0), am = new Array(nW).fill(0), pm = new Array(nW).fill(0), wingOf = new Map();
         for (const f of order) {
@@ -718,17 +719,17 @@ window.PS = window.PS || {};
             if (morning(f) ? am[w] >= pw : pm[w] >= pw) continue;
             if (best < 0 || load[w] < load[best] - 1e-9) best = w;
           }
-          if (best < 0) { // more firms than rooms: with fewer wings this cut is refused; with every wing open the firm joins
-            if (nW < nWings) return null; // the least-loaded wing and starts in one of its buffer rooms if no room comes free
+          if (best < 0) { // more firms than rooms: with fewer blocks this cut is refused; with every block open the firm joins
+            if (nW < nWings) return null; // the least-loaded block and starts in one of its buffer rooms if no room comes free
             best = 0; for (let w = 1; w < nW; w++) if (load[w] < load[best] - 1e-9) best = w;
           }
           wingOf.set(f, best); load[best] += W(f); if (morning(f)) am[best]++; else pm[best]++;
         }
         return { wingOf, load };
       };
-      // stage 2, inside each wing: one panel per firm at the earliest time at or after its release (bottom-left), then
+      // stage 2, inside each block: one panel per firm at the earliest time at or after its release (bottom-left), then
       // extra panels up to the Little's-law number for the firms with the most interview-minutes per panel, then the
-      // improvement moves (noon handovers, earlier openings, panel moves), all inside the wing
+      // improvement moves (noon handovers, earlier openings, panel moves), all inside the block
       const schedule = (wingOf) => {
         const rooms = []; for (let w = 0; w < nWings; w++) for (let j = 0; j < pw; j++) rooms.push({ wing: w, slot: j, bookings: [] });
         let unplaced = 0;
@@ -775,7 +776,7 @@ window.PS = window.PS || {};
         'hires, most first': F.slice().sort((a, b) => b.X - a.X || W(b) - W(a)),
       };
       const bestAt = (nW) => { let b = null; for (const [name, o] of Object.entries(orders)) { const r = evaluate(nW, o); if (r && (!b || r.z < b.z - 1e-6)) { b = r; b.order = name; } } return b; };
-      // lower bounds on wings: room-minutes (every interview-minute fits in pw rooms before the soft stop) and room count
+      // lower bounds on blocks: room-minutes (every interview-minute fits in pw rooms before the soft stop) and room count
       // (firms that open before noon need a room each)
       const wingLB = Math.max(1, Math.ceil(F.reduce((a, f) => a + W(f), 0) / (pw * P.softStop)), Math.ceil(F.filter(morning).length / pw), Math.ceil(F.filter(f => !morning(f)).length / pw));
       const full = bestAt(nWings); let chosen = full; const cuts = [];
@@ -793,7 +794,7 @@ window.PS = window.PS || {};
     // ---------------------------------------------------------------- improvement phase on the optimised plan
     // A savings heuristic (Clarke-Wright) fills noon-handover rooms with extra afternoon panels; an Or-opt style time
     // move opens small firms earlier so their room can be handed over; an Or-opt style relocation moves single panels
-    // between firms whenever the weighted completion of the plan falls. Every move stays inside one wing.
+    // between firms whenever the weighted completion of the plan falls. Every move stays inside one block.
     improvePlan(planned) {
       const P = this.P;
       const F = this.firms.filter(f => !f.unplaced && f.planRooms.length && f.planRooms.every(r => r));
@@ -949,14 +950,14 @@ window.PS = window.PS || {};
       f.state = 'open'; f.actualOpen = this.t; f.pendingRooms = [];
       for (const pr of f.planRooms) {
         if (pr && pr.from != null && pr.from > this.t) { f.pendingRooms.push(pr); continue; }
-        if (!this.takeRoom(f, pr) && f.panels.length) f.pendingRooms.push(Object.assign({}, pr || {}, { from: this.t, retry: true })); // no room in its wing yet: keep trying
+        if (!this.takeRoom(f, pr) && f.panels.length) f.pendingRooms.push(Object.assign({}, pr || {}, { from: this.t, retry: true })); // no room in its block yet: keep trying
       }
       if (f.panels.length === 0) { f.state = 'planned'; f.waitingRoom = true; return; }
       this.emit(f.label + ' opens with ' + f.panels.length + ' panel' + (f.panels.length > 1 ? 's' : '') + '.', 'open');
     }
-    // One wing per role on the day as well: every panel of a firm sits in the wing of its first panel (its Placecom
+    // One block per role on the day as well: every panel of a firm sits in the block of its first panel (its the placement committee
     // volunteer stays there). A busy planned room is replaced by a buffer room, then by a free unbooked room, in that same
-    // wing. Only a firm with no panel yet may be moved, as a whole, to the nearest wing with a free room.
+    // block. Only a firm with no panel yet may be moved, as a whole, to the nearest block with a free room.
     takeRoom(f, pr, waitForPlanned) {
       const P = this.P;
       let room = pr ? this.physRooms.get(this.roomKey(pr.wing, pr.slot)) : null;
@@ -996,7 +997,7 @@ window.PS = window.PS || {};
     }
     // a student in a role's round 2 queue may be called only while they would still take that role: not placed, and the
     // role ranked above any offer they hold or have rejected (maxRank). Once that fails it never holds again, because
-    // maxRank only falls, so the student is struck off the queue for good and Placecom tells the firm he has a better offer.
+    // maxRank only falls, so the student is struck off the queue for good and the placement committee tells the firm he has a better offer.
     round2Ok(f, s) {
       if (!s.active || s.status === 'final' || s.cAccepted) return false;
       const rk = s.rank.get(f.idx); if (rk == null || rk > s.maxRank) return false;
@@ -1056,7 +1057,7 @@ window.PS = window.PS || {};
       panel.endAt = panel.startAt + this.drawDuration(f, e.hot, round, s.id);
       if (round === 1) f.done.add(s.id);
       s.hist = s.hist || [];
-      panel.rec = { k: this.cluster, type: 'PI', firm: f.label, company: f.name, roleIdx: f.idx, round, list: e.hot ? 'hotlist' : 'shortlist', sent: this.t, start: panel.startAt, end: null, back: null,
+      panel.rec = { k: this.cluster, type: 'PI', firm: f.label, company: f.name, roleIdx: f.idx, round, list: e.hot ? 'preferred list' : 'standard list', sent: this.t, start: panel.startAt, end: null, back: null,
         wing: panel.room.wing, slot: panel.room.slot, buffer: !!panel.room.buffer, rank: s.rank.get(f.idx), outcome: 'In interview' };
       s.hist.push(panel.rec);
       f.interviews++; this.dayStats.interviews++;
@@ -1097,7 +1098,7 @@ window.PS = window.PS || {};
       const g = s.holdFirm; if (g == null) return;
       const f = this.firmByRole.get(g); s.holdFirm = null; s.holdRank = 0;
       if (!f) return;
-      f.held.delete(s.id); f.holdsReleased++; this.dayStats.wasted++;
+      f.held.delete(s.id); f.holdsReleased++; this.dayStats.wasted++; this.dayStats.holdLoss++;
       (s.hist = s.hist || []).push({ k: this.cluster, type: 'event', t: this.t, text: 'Released the held offer of ' + f.label });
       if (f.state === 'closed') { f.lostHires++; this.dayStats.lostHires++; this.emit(f.label + ' loses a hire: ' + s.name + ' released a hold after it left.', 'lost'); }
       else if (this.P.targetGross) { f.lostHires++; this.dayStats.lostHires++; this.emit(f.label + ' loses a hire: ' + s.name + ' released a hold (the offer already counts towards its ' + f.X + ').', 'lost'); }
@@ -1112,7 +1113,7 @@ window.PS = window.PS || {};
       if (s.status === 'dreaming') {
         const old = s.offer != null ? this.oldFirmInfo[s.offer] : null;
         s.status = 'final'; this.metrics.dreamConversions++; this.dayStats.dreamConversions++;
-        if (old) old.lostToDream++;
+        if (old) old.lostToDream++; this.dayStats.dreamLoss++;
         this.emit(s.name + ' converts a dream at ' + f.label + ' and leaves placement.', 'dream');
         this.bubble(s, 'Dream offer!', '#9b5de5');
         s.offer = f.idx; s.offerCluster = this.cluster; s.finalHow = 'dream';
@@ -1139,7 +1140,7 @@ window.PS = window.PS || {};
         this.bubble(s, 'Holding offer', '#e0a526'); this.emit(s.name + ' holds ' + f.label + ' (rank ' + rk + ') and waits for higher choices.', 'hold');
         this.checkFull(f); return;
       }
-      f.rejectsRecv++; this.dayStats.wasted++; s.maxRank = Math.min(s.maxRank, rk); this.dropDominated(s);
+      f.rejectsRecv++; this.dayStats.wasted++; this.dayStats.rejected++; s.maxRank = Math.min(s.maxRank, rk); this.dropDominated(s);
       this.bubble(s, 'Rejected offer', '#d0555b'); this.emit(s.name + ' rejects ' + f.label + ' (rank ' + rk + ' of ' + s.nRanked + ').', 'reject');
     }
 
@@ -1169,7 +1170,7 @@ window.PS = window.PS || {};
       const P = this.P;
       this.physRooms = new Map();
       for (let w = 0; w < P.wings; w++) for (let j = 0; j < P.roomsPerWingPlanned + P.roomsPerWingBuffer; j++) this.physRooms.set(this.roomKey(w, j), { wing: w, slot: j, buffer: j >= P.roomsPerWingPlanned, firm: null, freeAt: 0, used: false });
-      this.dayStats = { interviews: 0, offers: 0, placements: 0, wasted: 0, lostHires: 0, dreamConversions: 0, bufferOpenings: 0, peakRooms: 0, idle: 0, r2Dropped: 0 };
+      this.dayStats = { interviews: 0, offers: 0, placements: 0, wasted: 0, lostHires: 0, dreamConversions: 0, bufferOpenings: 0, peakRooms: 0, idle: 0, r2Dropped: 0, rejected: 0, holdLoss: 0, dreamLoss: 0, panelMin: 0 };
       // which planned rooms each firm expects, and from when (so a free room is not lent to a firm that is not its own)
       this.planBook = new Map();
       for (const f of this.firms || []) for (const pr of f.planRooms || []) if (pr) { const key = this.roomKey(pr.wing, pr.slot); if (!this.planBook.has(key)) this.planBook.set(key, []); this.planBook.get(key).push({ firm: f, start: pr.from != null ? pr.from : f.planOpen }); }
@@ -1196,7 +1197,7 @@ window.PS = window.PS || {};
       // afternoon panels planned into noon-handover rooms
       for (const f of this.firms) if (f.pendingRooms && f.pendingRooms.length) {
         if (f.state !== 'open') { if (f.state === 'closed' || f.state === 'closing') f.pendingRooms = []; continue; }
-        f.pendingRooms = f.pendingRooms.filter(pr => { if (t < pr.from) return true; if (!this.takeRoom(f, pr, !pr.retry)) return true; this.emit(f.label + ' adds a panel in Wing ' + PS.wingLabel(f.panels[f.panels.length - 1].room.wing) + (pr.retry ? ' (a room in its wing came free).' : ' (noon handover).'), 'open'); return false; });
+        f.pendingRooms = f.pendingRooms.filter(pr => { if (t < pr.from) return true; if (!this.takeRoom(f, pr, !pr.retry)) return true; this.emit(f.label + ' adds a panel in Block ' + PS.wingLabel(f.panels[f.panels.length - 1].room.wing) + (pr.retry ? ' (a room in its block came free).' : ' (noon handover).'), 'open'); return false; });
       }
       // closings and extensions
       for (const f of this.firms) {
@@ -1213,7 +1214,7 @@ window.PS = window.PS || {};
       // stats
       let busyRooms = 0; for (const r of this.physRooms.values()) if (r.firm) busyRooms++;
       this.dayStats.peakRooms = Math.max(this.dayStats.peakRooms, busyRooms);
-      for (const f of this.firms) if (f.state === 'open') for (const p of f.panels) if (!p.student) { f.idle++; this.dayStats.idle++; }
+      for (const f of this.firms) if (f.state === 'open') for (const p of f.panels) { f.panelMin = (f.panelMin || 0) + 1; this.dayStats.panelMin++; if (!p.student) { f.idle++; this.dayStats.idle++; } }
       this.t++;
       const allClosed = this.firms.every(f => f.state === 'closed');
       const nobodyMoving = this.students.every(s => s.loc === 'seat');
@@ -1303,7 +1304,13 @@ window.PS = window.PS || {};
         filled: F.filter(f => this.count(f) >= f.X).length, hires: F.reduce((a, f) => a + this.hires(f), 0), targetGross: +!!this.P.targetGross,
         interviews: this.dayStats.interviews, offersMade: this.dayStats.offers, wasted: this.dayStats.wasted,
         lostHolds: this.dayStats.lostHires, dreamConversions: this.dayStats.dreamConversions,
-        idleHours: Math.round(this.dayStats.idle / 60), peakRooms: this.dayStats.peakRooms, bufferOpenings: this.dayStats.bufferOpenings,
+        // offers that did not become a hire, by cause: turned down at once, held and later released, or accepted and then
+        // left behind when the student converted a dream offer in this cluster
+        rejected: this.dayStats.rejected, holdLoss: this.dayStats.holdLoss, dreamLoss: this.dayStats.dreamLoss,
+        totalLoss: this.dayStats.rejected + this.dayStats.holdLoss + this.dayStats.dreamLoss,
+        // panel utilisation: share of open panel-minutes in which a panel had a student; idle minutes per role
+        util: this.dayStats.panelMin ? 100 * (1 - this.dayStats.idle / this.dayStats.panelMin) : 0, idleMinPerRole: F.length ? this.dayStats.idle / F.length : 0,
+        idleHours: Math.round(this.dayStats.idle / 60), idleMin: this.dayStats.idle, panelMin: this.dayStats.panelMin, peakRooms: this.dayStats.peakRooms, bufferOpenings: this.dayStats.bufferOpenings,
         endTime: Math.max(0, ...F.map(f => f.actualClose || 0)), ranks,
         extensions: F.reduce((a, f) => a + f.extensions, 0), r2Dropped: this.dayStats.r2Dropped || 0,
         wingsPlanned: this.decisions[k] && this.decisions[k].summary[this.planMode] ? this.decisions[k].summary[this.planMode].wingsUsed : null,
@@ -1450,6 +1457,8 @@ window.PS = window.PS || {};
       gross1: C[0] ? C[0].grossOffers : 0, gross2: C[1] ? C[1].grossOffers : 0, gross3: C[2] ? C[2].grossOffers : 0,
       interviews: sum(c => c.interviews), wasted: sum(c => c.wasted), lost: (M.lostHolds || 0) + (M.lostToDream || 0), lostHolds: M.lostHolds || 0,
       dreamConv: M.dreamConversions || 0, rank1: sum(c => c.ranks.r1), top10: sum(c => c.ranks.r1 + c.ranks.top10), below50: sum(c => c.ranks.rest),
+      rejected: sum(c => c.rejected || 0), holdLoss: sum(c => c.holdLoss || 0), dreamLoss: sum(c => c.dreamLoss || 0), totalLoss: sum(c => c.totalLoss || 0),
+      util: (() => { const pm = sum(c => c.panelMin || 0), id = sum(c => c.idleMin || 0); return pm ? 100 * (1 - id / pm) : 0; })(), idleMinPerRole: sum(c => (c.idleMinPerRole || 0) * c.roles) / Math.max(1, sum(c => c.roles)),
       idle: sum(c => c.idleHours), buffer: sum(c => c.bufferOpenings), r2Dropped: sum(c => c.r2Dropped || 0), wings: sum(c => c.wingsPlanned || 0) / Math.max(1, C.length), peakRooms: Math.max(0, ...C.map(c => c.peakRooms)), extensions: sum(c => c.extensions),
       endAvg: sum(c => c.endTime) / Math.max(1, C.length),
       gdEnd: (() => { const d = Object.values(sim.gdDays || {}); return d.length ? d.reduce((a, x) => a + x[sim.planMode === 'baseline' && sim.matchMode === 'baseline' ? 'baseline' : 'optimised'].end, 0) / d.length : 0; })(),

@@ -1,4 +1,4 @@
-/* Canvas renderer: PP Gupta Auditorium, the central tracker, the wings on three floors, Placecom volunteers and moving students. */
+/* Canvas renderer: the auditorium, the central tracker, the blocks on three floors, the placement committee volunteers and moving students. */
 window.PS = window.PS || {};
 (function (PS) {
   'use strict';
@@ -9,11 +9,11 @@ window.PS = window.PS || {};
   const DESK = { x: TRK.x + TRK.w / 2, y: TRK.y + TRK.h / 2 + 18 };
   const SPINE_X = 530;
   const FX = 552, FW = W - FX - 10;
-  const TO_TRACKER = 0.15, AT_TRACKER = 0.5; // share of each walk: reach the tracker, check in, then on to the wing
+  const TO_TRACKER = 0.15, AT_TRACKER = 0.5; // share of each walk: reach the tracker, check in, then on to the block
 
-  // layout adapts to the number of wings, rooms per wing and students
+  // layout adapts to the number of blocks, rooms per block and students
   let L = null;
-  function floorsFor(nW) { // wings 2,3 ground; 6,7,8 first; 9-12 (and any extra) second
+  function floorsFor(nW) { // blocks 2,3 ground; 6,7,8 first; 9-12 (and any extra) second
     const f = [[], [], []];
     for (let w = 0; w < nW; w++) f[Math.min(2, PS.wingFloor(w))].push(w);
     return f;
@@ -34,7 +34,7 @@ window.PS = window.PS || {};
       bands.push(band);
       floors[fl].forEach((w, i) => { wings[w] = { x: FX + i * (wingW + 8), y: y + 18, w: wingW, h: bandH - 18 - 30, floor: fl, corridorY: band.corridorY }; });
     }
-    const synH = 22; // syndicate (GD) rooms either side of the wing entrance
+    const synH = 22; // syndicate (GD) rooms either side of the block entrance
     const iw = wingW - 12, ih = wings[0].h - 26 - synH - 6; const gx = 3, gy = 4;
     let best = null;
     for (let c = 1; c <= perWing; c++) {
@@ -60,7 +60,7 @@ window.PS = window.PS || {};
     const col = slot % L.roomCols, row = Math.floor(slot / L.roomCols);
     return { x: g.x + 6 + col * (L.rw + L.gx), y: g.y + 20 + row * (L.rh + L.gy), w: L.rw, h: L.rh };
   }
-  // syndicate rooms sit either side of the wing entrance, where the Placecom volunteer is; they hold GDs on GD days
+  // syndicate rooms sit either side of the block entrance, where the the placement committee volunteer is; they hold GDs on GD days
   const EW = 26;
   function gdRect(wing, slot) {
     const g = L.wings[wing]; if (!g) return { x: -100, y: -100, w: 1, h: 1 };
@@ -171,7 +171,7 @@ window.PS = window.PS || {};
       roundRect(ctx, AUD.x, AUD.y, AUD.w, AUD.h, 12); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#e9e4da'; roundRect(ctx, AUD.x + 60, AUD.y + 10, AUD.w - 120, 30, 6); ctx.fill();
       ctx.fillStyle = '#6b7380'; ctx.textAlign = 'center'; ctx.font = FONT(12, 600);
-      ctx.fillText('PP Gupta Auditorium', AUD.x + AUD.w / 2, AUD.y + 25);
+      ctx.fillText('Auditorium', AUD.x + AUD.w / 2, AUD.y + 25);
       // corridors: door → tracker → stairs → each floor's corridor
       ctx.strokeStyle = '#e6e1d7'; ctx.lineWidth = 10; ctx.lineCap = 'round';
       const cys = L.bands.filter(b => b.wings.length).map(b => b.corridorY);
@@ -189,7 +189,7 @@ window.PS = window.PS || {};
       ctx.fillStyle = '#4b5361'; roundRect(ctx, DESK.x - 5, DESK.y - 19, 10, 8, 1.5); ctx.fill();
       // empty seats
       for (let i = 0; i < sim.students.length; i++) { const p = seatPos(i); ctx.strokeStyle = '#e1dcd2'; ctx.beginPath(); ctx.arc(p.x, p.y, L.seatR, 0, Math.PI * 2); ctx.stroke(); }
-      // floors, wings and rooms
+      // floors, blocks and rooms
       for (const b of L.bands) {
         if (!b.wings.length) continue;
         ctx.fillStyle = '#8a8377'; ctx.textAlign = 'left'; ctx.font = FONT(10, 700); ctx.fillText(PS.FLOOR_NAMES[b.floor].toUpperCase(), FX, b.y + 7);
@@ -202,11 +202,11 @@ window.PS = window.PS || {};
       for (let w = 0; w < L.wings.length; w++) {
         const g = L.wings[w];
         ctx.fillStyle = '#fbfaf8'; ctx.strokeStyle = '#d9d4ca'; roundRect(ctx, g.x, g.y, g.w, g.h, 9); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#4b5361'; ctx.textAlign = 'left'; ctx.font = FONT(12, 600); ctx.fillText('Wing ' + PS.wingLabel(w), g.x + 7, g.y + 11);
-        // Placecom volunteer at the wing entrance, with a syndicate room on either side
+        ctx.fillStyle = '#4b5361'; ctx.textAlign = 'left'; ctx.font = FONT(12, 600); ctx.fillText('Block ' + PS.wingLabel(w), g.x + 7, g.y + 11);
+        // the placement committee volunteer at the block entrance, with a syndicate room on either side
         const e = entrance(w); ctx.fillStyle = '#d9d4ca'; ctx.fillRect(e.x - 9, e.y - 2, 18, 4);
         drawPerson(ctx, e.x, e.y - L.synH / 2 - 4, '#e0a526');
-        ctx.fillStyle = '#9a6c00'; ctx.textAlign = 'left'; ctx.font = FONT(8.5); ctx.fillText('Placecom', e.x + 12, e.cy - 2);
+        ctx.fillStyle = '#9a6c00'; ctx.textAlign = 'left'; ctx.font = FONT(8.5); ctx.fillText('Desk', e.x + 12, e.cy - 2);
         for (let j = 0; j < L.gdN; j++) {
           const rr = gdRect(w, j), g = gdNow.get(w * 100 + j);
           if (g) { ctx.fillStyle = PS.firmTint(g.comp); ctx.strokeStyle = PS.firmColor(g.comp); ctx.lineWidth = 1.5; }

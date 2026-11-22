@@ -97,8 +97,8 @@
     state.gd = { k, day, mode, t: 0, end: Math.ceil(x.end + sim.P.transit + 1) };
     const inv = day.companies.reduce((a, c) => a + c.invited, 0);
     $('#overlay').innerHTML = '<div class="box"><h3>GD day before cluster ' + k + '</h3>' +
-      '<p class="muted">Cluster ' + (k - 1) + ' is over. Tomorrow\'s cluster ' + k + ' firms have screened CVs, and ' + day.companies.length + ' companies call students to a group discussion today, one GD per company across all its roles: ' + inv + ' invitations, ' + x.nGroups + ' groups, in the syndicate rooms either side of each wing entrance (' + (sim.P.wings * sim.P.gdRoomsPerWing) + ' rooms). A company with two panels gets both syndicate rooms of one wing, since its Placecom volunteer stays in that wing, and the next company can use a room only ' + sim.P.gdSwitch + ' minutes after the last one leaves.</p>' +
-      '<p class="muted">This run follows the <b>' + (mode === 'baseline' ? 'baseline fixed-block' : 'optimised') + '</b> GD timetable. Blue dots are students in a GD, white are walking via the central tracker, grey are waiting in the auditorium; dim dots have no GD today.</p>' +
+      '<p class="muted">Cluster ' + (k - 1) + ' is over. Tomorrow\'s cluster ' + k + ' firms have screened CVs, and ' + day.companies.length + ' companies call students to a group discussion today, one GD per company across all its roles: ' + inv + ' invitations, ' + x.nGroups + ' groups, in the syndicate rooms either side of each block entrance (' + (sim.P.wings * sim.P.gdRoomsPerWing) + ' rooms). A company with two panels gets both syndicate rooms of one block, since its placement committee volunteer stays in that block, and the next company can use a room only ' + sim.P.gdSwitch + ' minutes after the last one leaves.</p>' +
+      '<p class="muted">This run follows the <b>' + (mode === 'baseline' ? 'baseline fixed-sitting' : 'optimised') + '</b> GD timetable. Blue dots are students in a GD, white are walking via the central tracker, grey are waiting in the auditorium; dim dots have no GD today.</p>' +
       '<div class="btnrow"><button class="primary" id="btnGdPlay">Watch the GD day</button><button id="btnGdSkip">Skip to the end of the GD day</button></div></div>';
     $('#overlay').classList.remove('hidden'); state.pre = false;
     $('#btnGdPlay').addEventListener('click', () => { hideOverlay(); state.playing = true; $('#btnPlay').textContent = 'Pause'; });
@@ -112,14 +112,14 @@
       ['Last GD finished', PS.fmtTime(Math.round(b.end)), PS.fmtTime(Math.round(o.end))],
       ['Lower bound on the last finish', PS.fmtTime(Math.ceil(lb.value)), PS.fmtTime(Math.ceil(lb.value))],
       ['Companies given two panels', b.twoPanel, o.twoPanel],
-      ['Panelist idle hours (panels waiting while their company is still running)', Math.round(b.panelIdle / 60), Math.round(o.panelIdle / 60)],
+      ['GD panel utilisation (share of panel time with a group in the room)', Math.round(b.util || 0) + '%', Math.round(o.util || 0) + '%'],
       ['Late (buffer) GDs timetabled after ' + PS.fmtTime(P.gdLatestStart) + ' · with two panels', b.latePlanned + ' · ' + (b.lateTwoPanel || 0), o.latePlanned + ' · ' + (o.lateTwoPanel || 0)],
       ['Companies actually starting after ' + PS.fmtTime(P.gdLatestStart), b.lateActual, o.lateActual],
       ['Groups held up by a member still in another GD', b.clashGroups, o.clashGroups],
       ['Groups running past ' + PS.fmtTime(P.gdDayEnd), b.lateGroups, o.lateGroups],
       ['Most GDs for one student', lb.maxGdsPerStudent, lb.maxGdsPerStudent],
     ];
-    $('#overlay').innerHTML = '<div class="box"><h3>GD day before cluster ' + g.k + ' is over</h3><table><thead><tr><th>Measure</th><th class="' + (g.mode === 'baseline' ? 'activecol' : '') + '">Baseline (fixed blocks)</th><th class="' + (g.mode === 'optimised' ? 'activecol' : '') + '">Optimised</th></tr></thead><tbody>' +
+    $('#overlay').innerHTML = '<div class="box"><h3>GD day before cluster ' + g.k + ' is over</h3><table><thead><tr><th>Measure</th><th class="' + (g.mode === 'baseline' ? 'activecol' : '') + '">Baseline (fixed sittings)</th><th class="' + (g.mode === 'optimised' ? 'activecol' : '') + '">Optimised</th></tr></thead><tbody>' +
       rows.map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td></tr>').join('') + '</tbody></table>' +
       '<p class="muted">Each GD firm has now cut its list one step: defensive to competing, competing to confident, confident from 2X to ' + P.gdConfList + 'X.</p>' +
       '<div class="btnrow"><button class="primary" id="btnGdDone">Continue to cluster ' + g.k + ' decisions</button><button id="btnGdTab">Open the GD days tab</button></div></div>';
@@ -135,7 +135,7 @@
       ['Firms opening at 8:00 am', s => s.at8],
       ['Firms opening later', s => s.later ? s.later + ' (' + s.openTimes.filter(x => x[0] > 0).map(x => x[1] + ' at ' + PS.fmtTime(x[0])).join(', ') + ')' : '0'],
       ['Panels planned', s => s.panels],
-      ['Wings used (of ' + P.wings + ') · roles split across wings', s => (s.wingsUsed != null ? s.wingsUsed : '–') + ' · ' + (s.splitFirms || 0)],
+      ['Blocks used (of ' + P.wings + ') · roles split across blocks', s => (s.wingsUsed != null ? s.wingsUsed : '–') + ' · ' + (s.splitFirms || 0)],
       ['Planned rooms used (of ' + d.plannedRooms + ')', s => s.roomsUsed],
       ['Rooms handed over at noon', s => s.reused],
       ['Firms starting in a buffer room', s => s.noRoom],
@@ -145,7 +145,7 @@
       ['Plan cost: Σ hires × planned finish (hire-hours)', s => Math.round(s.cost / 60).toLocaleString('en-IN')],
       ['Gap to the lower bound (rooms relaxed)', s => Math.round(100 * (s.cost - d.lowerBound) / s.cost) + '%'],
       ['Improvement moves: savings, earlier openings, relocations', s => s.improve ? s.improve.savings + ', ' + s.improve.shifts + ', ' + s.improve.relocations : '–'],
-      ['Wing packing: lower bound on wings · cost (exact finishes) with all wings → with the wings kept', s => s.packing ? s.packing.wingLB + ' · ' + Math.round(s.packing.zBest / 60).toLocaleString('en-IN') + ' → ' + Math.round(s.packing.z / 60).toLocaleString('en-IN') + ' hire-hours (' + s.packing.wingsUsed + ' wings)' : '–'],
+      ['Block packing: lower bound on blocks · cost (exact finishes) with all blocks → with the blocks kept', s => s.packing ? s.packing.wingLB + ' · ' + Math.round(s.packing.zBest / 60).toLocaleString('en-IN') + ' → ' + Math.round(s.packing.z / 60).toLocaleString('en-IN') + ' hire-hours (' + s.packing.wingsUsed + ' blocks)' : '–'],
     ];
   }
   function showPreCluster() {
@@ -165,8 +165,8 @@
   function gdLine(k) {
     const g = sim.gdDays && sim.gdDays[k]; if (!g) return '';
     const inv = g.companies.reduce((a, c) => a + c.invited, 0), o = g.optimised, b = g.baseline, use = sim.mode === 'baseline' ? b : o;
-    return '<p class="muted"><b>GD day (yesterday):</b> ' + g.companies.length + ' companies held GDs for ' + inv + ' invitations in ' + use.nGroups + ' groups. The ' + (sim.mode === 'baseline' ? 'baseline block timetable' : 'optimised timetable') +
-      ' finished at ' + PS.fmtTime(use.end) + ' (' + (sim.mode === 'baseline' ? 'optimised ' + PS.fmtTime(o.end) : 'baseline blocks ' + PS.fmtTime(b.end)) + '; lower bound ' + PS.fmtTime(Math.ceil(g.lowerBound.value)) + '). ' +
+    return '<p class="muted"><b>GD day (yesterday):</b> ' + g.companies.length + ' companies held GDs for ' + inv + ' invitations in ' + use.nGroups + ' groups. The ' + (sim.mode === 'baseline' ? 'baseline sitting timetable' : 'optimised timetable') +
+      ' finished at ' + PS.fmtTime(use.end) + ' (' + (sim.mode === 'baseline' ? 'optimised ' + PS.fmtTime(o.end) : 'baseline sittings ' + PS.fmtTime(b.end)) + '; lower bound ' + PS.fmtTime(Math.ceil(g.lowerBound.value)) + '). ' +
       'The GD firms below have already cut their lists one step after the GD.</p>';
   }
 
@@ -217,7 +217,7 @@
       $('#counters').innerHTML = C.map(c => '<div class="counter"><div class="v">' + c[1] + '</div><div class="k">' + c[0] + '</div></div>').join('');
       // GD event log (the normal log is rebuilt when the GD day ends)
       const ev = [];
-      G.forEach(x => { const where = 'wing ' + PS.wingLabel(x.wing) + ', syndicate ' + (x.slot + 1);
+      G.forEach(x => { const where = 'block ' + PS.wingLabel(x.wing) + ', syndicate ' + (x.slot + 1);
         if (x.start <= t) ev.push([x.start, 1, 'open', esc(x.comp) + ' GD starts in ' + where + ' with ' + x.size + ' students.']);
         if (x.end <= t) ev.push([x.end, 2, 'accept', esc(x.comp) + ' GD ends in ' + where + '.']); });
       ev.sort((a, b) => b[0] - a[0] || b[1] - a[1]);
@@ -248,9 +248,9 @@
     if (!h) { tip.classList.add('hidden'); return; }
     let html = '';
     if (h.type === 'tracker') {
-      html = '<b>Central tracker</b><br>Every student checks in here on the way to a wing and on the way back: about ' + (sim.P.transit / 2) + ' min to reach it and check in, then ' + (sim.P.transit / 2) + ' min on to the wing.';
+      html = '<b>Central tracker</b><br>Every student checks in here on the way to a block and on the way back: about ' + (sim.P.transit / 2) + ' min to reach it and check in, then ' + (sim.P.transit / 2) + ' min on to the block.';
     } else if (h.type === 'gdroom') {
-      html = '<b>Wing ' + PS.wingLabel(h.wing) + ', syndicate room ' + (h.slot + 1) + '</b><br>Beside the Placecom desk at the wing entrance. Used for group discussions on GD days.';
+      html = '<b>Block ' + PS.wingLabel(h.wing) + ', syndicate room ' + (h.slot + 1) + '</b><br>Beside the placement committee desk at the block entrance. Used for group discussions on GD days.';
       if (h.group) html += '<br>Now: ' + esc(h.group.comp) + ' GD, ' + h.group.size + ' students, until ' + PS.fmtTime(Math.round(h.group.end));
     } else if (h.type === 'gdstudent') {
       const s = h.s, q = h.q, segs = (renderer.gdPrep(state.gd).segs.get(s.id) || []);
@@ -264,8 +264,8 @@
       if (s.offer != null) html += '<br>Offer: ' + esc(sim.roles[s.offer].company);
       if (s.active && s.nRanked) html += '<br>' + s.nRanked + ' roles ranked this cluster';
     } else {
-      const rm = h.r; const f = rm.firm; html = '<b>Wing ' + PS.wingLabel(rm.wing) + ', room ' + (rm.slot + 1) + '</b> · ' + PS.FLOOR_NAMES[PS.wingFloor(rm.wing)].toLowerCase() + (rm.buffer ? ' (buffer)' : '');
-      if (f) { html += '<br>' + esc(f.label) + '<br>' + (sim.P.targetGross ? 'Offers ' + sim.count(f) + ' of ' + f.X + ' · hires ' + sim.hires(f) : 'Hires ' + sim.count(f) + ' of ' + f.X) + ' · ' + f.interviews + ' interviews<br>' + (f.role.inter === 2 ? 'Two interactions' : 'One interaction') + ' · ' + f.strategy + ' list (' + f.hotSize + ' hot / ' + f.listSize + ')'; const p = f.panels.find(q => q.room === rm); if (p && p.student) html += '<br>Now: ' + esc(p.student.name) + ' (round ' + p.round + ', until ' + PS.fmtTime(p.endAt) + ')'; }
+      const rm = h.r; const f = rm.firm; html = '<b>Block ' + PS.wingLabel(rm.wing) + ', room ' + (rm.slot + 1) + '</b> · ' + PS.FLOOR_NAMES[PS.wingFloor(rm.wing)].toLowerCase() + (rm.buffer ? ' (buffer)' : '');
+      if (f) { html += '<br>' + esc(f.label) + '<br>' + (sim.P.targetGross ? 'Offers ' + sim.count(f) + ' of ' + f.X + ' · hires ' + sim.hires(f) : 'Hires ' + sim.count(f) + ' of ' + f.X) + ' · ' + f.interviews + ' interviews<br>' + (f.role.inter === 2 ? 'Two interactions' : 'One interaction') + ' · ' + f.strategy + ' list (' + f.hotSize + ' preferred / ' + f.listSize + ')'; const p = f.panels.find(q => q.room === rm); if (p && p.student) html += '<br>Now: ' + esc(p.student.name) + ' (round ' + p.round + ', until ' + PS.fmtTime(p.endAt) + ')'; }
       else html += '<br>Empty';
     }
     tip.innerHTML = html; tip.classList.remove('hidden');
@@ -321,9 +321,9 @@
       ' · left after the planned close: ' + lateClose.length + ' of ' + closed.length + ' · reached target X: ' + F.filter(f => sim.count(f) >= f.X).length;
     const rows = F.map(f => {
       const rooms = PS.roomsText(f.planRooms, f.planOpen);
-      return '<tr><td><span class="swatch" style="background:' + PS.firmColor(f.name) + '"></span>' + esc(f.label) + '</td><td>' + esc(f.role.cohort) + '</td><td class="num">' + Math.round(f.popPct * 100) + '%</td><td>' + f.strategy + '</td><td class="num">' + f.X + '</td><td class="num">' + f.hotSize + ' / ' + f.listSize + '</td><td class="num">' + PS.fmtTime(f.planOpen) + '</td><td class="num">' + f.planPanels + '</td><td>' + rooms + '</td><td class="num">' + PS.fmtTime(f.planClose) + '</td><td class="num">' + (f.actualOpen != null ? PS.fmtTime(f.actualOpen) : '–') + '</td><td class="num">' + (f.actualClose != null ? PS.fmtTime(f.actualClose) : '–') + '</td><td class="num">' + (sim.P.targetGross ? sim.count(f) + ' · ' + sim.hires(f) : sim.count(f)) + '</td><td class="num">' + f.interviews + '</td><td class="num">' + Math.round(f.idle / 60 * 10) / 10 + '</td><td class="num">' + f.extensions + '</td></tr>';
+      return '<tr><td><span class="swatch" style="background:' + PS.firmColor(f.name) + '"></span>' + esc(f.label) + '</td><td>' + esc(f.role.cohort) + '</td><td class="num">' + Math.round(f.popPct * 100) + '%</td><td>' + f.strategy + '</td><td class="num">' + f.X + '</td><td class="num">' + f.hotSize + ' / ' + f.listSize + '</td><td class="num">' + PS.fmtTime(f.planOpen) + '</td><td class="num">' + f.planPanels + '</td><td>' + rooms + '</td><td class="num">' + PS.fmtTime(f.planClose) + '</td><td class="num">' + (f.actualOpen != null ? PS.fmtTime(f.actualOpen) : '–') + '</td><td class="num">' + (f.actualClose != null ? PS.fmtTime(f.actualClose) : '–') + '</td><td class="num">' + (sim.P.targetGross ? sim.count(f) + ' · ' + sim.hires(f) : sim.count(f)) + '</td><td class="num">' + f.interviews + '</td><td class="num">' + (f.panelMin ? Math.round(100 * (1 - f.idle / f.panelMin)) + '%' : '–') + '</td><td class="num">' + f.extensions + '</td></tr>';
     }).join('');
-    $('#planTable').innerHTML = '<thead><tr><th>Firm and role</th><th>Cohort</th><th class="num">Popularity in cluster</th><th>List strategy</th><th class="num">Target X</th><th class="num">Hot / list</th><th class="num">Planned open</th><th class="num">Panels</th><th>Rooms</th><th class="num">Planned close</th><th class="num">Opened</th><th class="num">Left</th><th class="num">' + (sim.P.targetGross ? 'Offers made · hires' : 'Hires made') + '</th><th class="num">Interviews</th><th class="num">Idle panel hours</th><th class="num">Extensions</th></tr></thead><tbody>' + rows + '</tbody>';
+    $('#planTable').innerHTML = '<thead><tr><th>Firm and role</th><th>Cohort</th><th class="num">Popularity in cluster</th><th>List strategy</th><th class="num">Target X</th><th class="num">Preferred / shortlist</th><th class="num">Planned open</th><th class="num">Panels</th><th>Rooms</th><th class="num">Planned close</th><th class="num">Opened</th><th class="num">Left</th><th class="num">' + (sim.P.targetGross ? 'Offers made · hires' : 'Hires made') + '</th><th class="num">Interviews</th><th class="num">Panels busy</th><th class="num">Extensions</th></tr></thead><tbody>' + rows + '</tbody>';
   }
   function renderPlanGd(k) {
     const mode = planGdMode(), d = sim.gdDays[k][mode], P = sim.P;
@@ -334,7 +334,7 @@
     $('#planSummary').textContent = C.length + ' companies, ' + (mode === 'baseline' ? 'baseline' : 'optimised') + ' timetable (the one this mode uses) · started later than planned: ' + lateS.length + (lateS.length ? ' (median ' + Math.round(median(lateS.map(c => c.start - c.plannedStart))) + ' min)' : '') +
       ' · ended after the planned end: ' + lateE.length + ' · last GD ends ' + PS.fmtTime(Math.round(d.end)) + '. Dashed lines: latest normal start (later starts are late buffer GDs) and end of the GD day.';
     const f = (t) => t != null ? PS.fmtTime(Math.round(t)) : '–';
-    $('#planTable').innerHTML = '<thead><tr><th>Company</th><th class="num">Panels</th><th class="num">Wing</th><th class="num">Groups</th><th class="num">Planned start</th><th class="num">Planned end</th><th class="num">Started</th><th class="num">Ended</th><th class="num">Start delay (min)</th><th class="num">Panelist idle (min)</th><th class="num">Invitees not grouped</th></tr></thead><tbody>' +
+    $('#planTable').innerHTML = '<thead><tr><th>Company</th><th class="num">Panels</th><th class="num">Block</th><th class="num">Groups</th><th class="num">Planned start</th><th class="num">Planned end</th><th class="num">Started</th><th class="num">Ended</th><th class="num">Start delay (min)</th><th class="num">Panelist idle (min)</th><th class="num">Invitees not grouped</th></tr></thead><tbody>' +
       C.map(c => '<tr><td><span class="swatch" style="background:' + PS.firmColor(c.name) + '"></span>' + esc(c.name) + (c.late ? ' <span class="tag late">late buffer</span>' : '') + '</td><td class="num">' + c.panels + '</td><td class="num">' + (c.wing != null ? PS.wingLabel(c.wing) : '–') + '</td><td class="num">' + (Array.isArray(c.groups) ? c.groups.length : c.groups) + '</td><td class="num">' + f(c.plannedStart) + '</td><td class="num">' + f(c.plannedEnd) + '</td><td class="num">' + f(c.start) + '</td><td class="num">' + f(c.end) + '</td><td class="num">' + (c.start != null && c.plannedStart != null ? Math.max(0, Math.round(c.start - c.plannedStart)) : '–') + '</td><td class="num">' + c.idle + '</td><td class="num">' + (c.left || 0) + '</td></tr>').join('') + '</tbody>';
   }
   $('#planView').addEventListener('change', () => { planChoice = $('#planView').value; renderPlan(); });
@@ -343,7 +343,7 @@
   const STU_ROUNDS = { c1pi: [1, 'PI', 'Cluster 1'], c2gd: [2, 'GD', 'Cluster 2 GD'], c2pi: [2, 'PI', 'Cluster 2 PI'], c3gd: [3, 'GD', 'Cluster 3 GD'], c3pi: [3, 'PI', 'Cluster 3 PI'] };
   let stuSel = null;
   const tm = (x) => x != null ? PS.fmtTime(Math.round(x)) : '–';
-  const roomOf = (h) => h.wing != null ? 'Wing ' + PS.wingLabel(h.wing) + ' · ' + (h.slot + 1) + (h.buffer ? ' (buffer)' : '') : '–';
+  const roomOf = (h) => h.wing != null ? 'Block ' + PS.wingLabel(h.wing) + ' · ' + (h.slot + 1) + (h.buffer ? ' (buffer)' : '') : '–';
   const roleName = (i) => sim.roles[i] ? sim.roles[i].company + ' – ' + sim.roles[i].role : '';
   function stuState(s) {
     const C = (k, text) => ({ key: k, color: 'var(--c-' + ({ free: 'free', walk: 'walk', int: 'int', hold: 'hold', placed: 'placed', dream: 'dream', out: 'out' })[k] + ')', text });
@@ -382,7 +382,7 @@
     const r = s.rounds && s.rounds[k]; if (!r) return '<span class="muted">not started</span>';
     if (r.pool === 'out') return '<span class="muted">out</span>';
     if (r.pool === 'dreaming') return '<span class="chip c-dream">dreaming in</span> ' + r.apps + ' dream application' + (r.apps === 1 ? '' : 's');
-    return 'No offer yet · ' + r.apps + ' applications · on ' + r.hot + ' hotlist' + (r.hot === 1 ? '' : 's') + ', ' + r.short + ' shortlist' + (r.short === 1 ? '' : 's');
+    return 'No offer yet · ' + r.apps + ' applications · on ' + r.hot + ' preferred list' + (r.hot === 1 ? '' : 's') + ', ' + r.short + ' standard list' + (r.short === 1 ? '' : 's');
   }
   function roundStats() {
     const rows = [];
@@ -462,15 +462,17 @@
       r('Students in the pool', c => c.pool != null ? c.pool : '–') + r('&nbsp;&nbsp;with no offer yet', c => c.poolNoOffer != null ? c.poolNoOffer : '–') + r('&nbsp;&nbsp;placed earlier, dreaming in', c => c.poolDreamers != null ? c.poolDreamers : '–') +
       r('Roles', c => c.roles) + r(sim.P.targetGross ? 'Target offers (sum of X, gross)' : 'Target hires (sum of X)', c => c.hiresTarget) + r('Students placed (net)', c => c.grossOffers) +
       r(sim.P.targetGross ? 'Firms that made all X offers' : 'Firms that filled X', c => c.filled + ' (' + pct(c.filled, c.roles) + ')') + r('Interviews held', c => c.interviews) + r('Offers made', c => c.offersMade) +
-      r('Wasted interviews', c => c.wasted) + r(sim.P.targetGross ? 'Hires lost to released holds' : 'Hires lost after firm left', c => c.lostHolds) + r('Dream conversions into cluster', c => c.dreamConversions) + r('Students who dreamed onwards', c => c.dreamers != null ? c.dreamers : '–') +
-      r('Placed at rank 1', c => c.ranks.r1) + r('Placed in top 10% of list', c => c.ranks.top10) + r('Placed in 10–25%', c => c.ranks.top25) + r('Placed in 25–50%', c => c.ranks.top50) + r('Placed below 50%', c => c.ranks.rest) +
-      r('Panel idle hours', c => c.idleHours) + r('Peak rooms in use', c => c.peakRooms) + r('Buffer room openings', c => c.bufferOpenings) + r('Shortlist extensions', c => c.extensions) + r('Last firm left', c => PS.fmtTime(c.endTime)) +
+      r('Offer losses: rejected (turned down at once)', c => c.rejected != null ? c.rejected : '–') + r('Offer losses: holds (held, then released)', c => c.holdLoss != null ? c.holdLoss : '–') + r('Offer losses: dreams (left for a dream offer)', c => c.dreamLoss != null ? c.dreamLoss : '–') + r('<b>Offer losses: total</b>', c => c.totalLoss != null ? '<b>' + c.totalLoss + '</b>' : '–') +
+      r('Dream conversions into cluster', c => c.dreamConversions) + r('Students who dreamed onwards', c => c.dreamers != null ? c.dreamers : '–') +
+      r('Placed in their top preference', c => c.ranks.r1) + r('Placed in the top 10% of their preferences', c => c.ranks.r1 + c.ranks.top10) + r('Placed in 10–25% of their preferences', c => c.ranks.top25) + r('Placed in 25–50%', c => c.ranks.top50) + r('Placed below 50%', c => c.ranks.rest) +
+      r('Panel utilisation (share of open panel time with a candidate)', c => c.util != null ? Math.round(c.util) + '%' : '–') + r('Idle panel minutes per role', c => c.idleMinPerRole != null ? Math.round(c.idleMinPerRole) : '–') + r('Peak rooms in use', c => c.peakRooms) + r('Buffer room openings', c => c.bufferOpenings) + r('Shortlist extensions', c => c.extensions) + r('Last firm left', c => PS.fmtTime(c.endTime)) +
       '</tbody></table>';
   }
+  const K3 = (M, key) => [1, 2, 3].reduce((a, k) => a + (M.clusters[k] && M.clusters[k][key] || 0), 0);
   function renderResults() {
     const M = sim.metrics;
     let html = '<div class="card"><h3>Current run · ' + $('#modeLabel').textContent + ' mode, seed ' + sim.P.seed + '</h3>' + clusterTable(M);
-    if (sim.finished) html += '<p>Placed overall: <b>' + (sim.students.length - M.unplaced) + ' of ' + sim.students.length + '</b>. Net placements by cluster: ' + M.net[1] + ' / ' + M.net[2] + ' / ' + M.net[3] + '. Hires lost: ' + M.lostHolds + ' to released holds, ' + M.lostToDream + ' to dreams.</p>';
+    if (sim.finished) html += '<p>Placed overall: <b>' + (sim.students.length - M.unplaced) + ' of ' + sim.students.length + '</b>. Net placements by cluster: ' + M.net[1] + ' / ' + M.net[2] + ' / ' + M.net[3] + '. Offer losses over the season: ' + K3(M, 'rejected') + ' rejected, ' + K3(M, 'holdLoss') + ' released holds, ' + K3(M, 'dreamLoss') + ' dreams, ' + K3(M, 'totalLoss') + ' in total.</p>';
     html += '</div>'; $('#resultsCurrent').innerHTML = html;
   }
   // ------------------------------------------------------------------ compare modes (every run kept, so each cluster and GD day can be viewed)
@@ -591,43 +593,43 @@
       ['applySd', 'Others: standard deviation of the share', 'pct'], ['applyMin', 'Others: minimum share', 'pct'], ['applyMax', 'Others: maximum share', 'pct'],
     ]],
     ['Firm list strategy', [
-      ['confHot', 'Confident: hotlist (× X)', 'num', 0.5], ['confList', 'Confident: total list (× X)', 'num', 0.5],
-      ['compHot', 'Competing: hotlist (× X)', 'num', 0.5], ['compList', 'Competing: total list (× X)', 'num', 0.5],
-      ['defHot', 'Defensive: hotlist (× X)', 'num', 0.5], ['defList', 'Defensive: total list (× X)', 'num', 0.5],
+      ['confHot', 'Confident: preferred list (× X)', 'num', 0.5], ['confList', 'Confident: shortlist (× X)', 'num', 0.5],
+      ['compHot', 'Competing: preferred list (× X)', 'num', 0.5], ['compList', 'Competing: shortlist (× X)', 'num', 0.5],
+      ['defHot', 'Defensive: preferred list (× X)', 'num', 0.5], ['defList', 'Defensive: shortlist (× X)', 'num', 0.5],
       ['stratTopPct', 'Top share of firms that lean confident', 'pct'], ['stratBottomPct', 'Bottom share that lean defensive', 'pct'], ['stratLean', 'Chance a firm follows its lean', 'pct'],
       ['targetGross', 'Target X counts offers made (1 = gross offers; 0 = net: accepted or held)', 'num', 1, 'Gross: a role stops once it has made X offers, whether or not students keep them; a released hold is not replaced. Net (earlier model): rejections and released holds are replaced until X are accepted or held'],
       ['extensions', 'Shortlist extensions allowed (1 = yes)', 'num', 1], ['maxExtensions', 'Maximum extensions per role', 'num', 1],
     ]],
     ['Offers', [
-      ['pOfferHot1', 'One interaction: offer to hotlist', 'pct'], ['pOfferShort1', 'One interaction: offer to shortlist', 'pct'],
-      ['pR2Hot', 'Two interactions: hotlist reaches round 2', 'pct'], ['pR2Short', 'Two interactions: shortlist reaches round 2', 'pct'],
-      ['pOfferHot2', 'Offer after round 2: hotlist', 'pct'], ['pOfferShort2', 'Offer after round 2: shortlist', 'pct'],
+      ['pOfferHot1', 'One interaction: offer to preferred list', 'pct'], ['pOfferShort1', 'One interaction: offer to standard list', 'pct'],
+      ['pR2Hot', 'Two interactions: preferred list reaches round 2', 'pct'], ['pR2Short', 'Two interactions: standard list reaches round 2', 'pct'],
+      ['pOfferHot2', 'Offer after round 2: preferred list', 'pct'], ['pOfferShort2', 'Offer after round 2: standard list', 'pct'],
     ]],
     ['Student decisions', [
       ['acceptAnchorPct', 'Accept anchor: list position', 'pct'], ['acceptAnchorVal', 'Accept anchor: probability', 'pct'],
       ['rejectAnchorPct', 'Reject anchor: list position', 'pct'], ['rejectAnchorVal', 'Reject anchor: probability', 'pct'],
       ['holdClock', 'Hold clock before auto-accept (min)', 'num', 5], ['finalNoReject', 'Cluster 3: no outright rejections (1 = on)', 'num', 1],
-      ['transit', 'Walk each way via the central tracker (min)', 'num', 1, 'Half to reach and check in at the central tracker, half from there to the wing'],
+      ['transit', 'Walk each way via the central tracker (min)', 'num', 1, 'Half to reach and check in at the central tracker, half from there to the block'],
     ]],
     ['Dreams', [
       ['dreamShare', 'Placed students who dream', 'pct'], ['dreamMaxTotal', 'Dream applications in total', 'num', 1], ['dreamMaxPerCluster', 'Dream applications per cluster', 'num', 1],
     ]],
     ['Rooms and time', [
-      ['wings', 'Wings', 'num', 1], ['roomsPerWingPlanned', 'Planned rooms per wing', 'num', 1], ['roomsPerWingBuffer', 'Buffer rooms per wing', 'num', 1],
+      ['wings', 'Blocks', 'num', 1], ['roomsPerWingPlanned', 'Planned rooms per block', 'num', 1], ['roomsPerWingBuffer', 'Buffer rooms per block', 'num', 1],
       ['turnover', 'Room turnover (min)', 'num', 5], ['reuseCloseBy', 'Room reuse: firm must close by', 'clock'], ['reuseOpenFrom', 'Room reuse: next firm opens from', 'clock'],
       ['lateSlotTime', 'Late-slot requests open from', 'clock'], ['openLatest', 'Latest open time', 'clock'], ['softStop', 'Soft stop (no new interviews)', 'clock'], ['hardStop', 'Hard stop', 'clock'],
     ]],
     ['Group discussions (day before clusters 2 and 3)', [
       ['gdOn', 'Hold GD days (1 = on)', 'num', 1, 'GD firms are ticked on the Firms tab'],
       ['gdSizeMin', 'Smallest GD group', 'num', 1], ['gdSizeMax', 'Largest GD group', 'num', 1],
-      ['gdCv', 'GD length variability (standard deviation as a share of the mean)', 'pct', null, 'Mean length is set per firm on the Firms tab: 30 min, 75 min for TAS'],
+      ['gdCv', 'GD length variability (standard deviation as a share of the mean)', 'pct', null, 'Mean length is set per firm on the Firms tab: 30 min by default'],
       ['gdTurnover', 'Changeover between groups in a GD room (min)', 'num', 1],
-      ['gdRoomsPerWing', 'GD rooms per wing', 'num', 1], ['gdMaxRooms', 'Most GD panels for one company (both in the same wing)', 'num', 1],
+      ['gdRoomsPerWing', 'GD rooms per block', 'num', 1], ['gdMaxRooms', 'Most GD panels for one company (both in the same block)', 'num', 1],
       ['gdSwitch', 'Gap before the next company can use a GD room (min)', 'num', 5, 'A company finishing at 9:00 am frees the room for the next company from 10:00 am'],
       ['gdLatestStart', 'Latest normal start for a company\'s GDs', 'clock', null, 'Starting later is allowed but kept to a minimum, like a buffer room; such a late GD runs two panels so it ends quickly'],
       ['gdPopWeight', 'Reputation weight: popular companies start GDs early', 'num', 0.5, 'Minutes of a later finish the optimiser accepts to bring the popularity-weighted mean start one minute earlier; 0 ignores popularity'],
       ['gdRestarts', 'Optimised GD timetable: extra shuffled company orders tried', 'num', 1],
-      ['gdDayEnd', 'GD day ends', 'clock'], ['gdBuffer', 'Baseline timetable: gap after a block\'s planned end before the next company (min)', 'num', 15],
+      ['gdDayEnd', 'GD day ends', 'clock'], ['gdBuffer', 'Baseline timetable: gap after a sitting\'s planned end before the next company (min)', 'num', 15],
       ['gdNoise', 'GD signal noise relative to CV screening', 'num', 0.1, 'Below 1 means the GD judges students more sharply than the CV shortlist did'],
       ['gdConfList', 'Confident firm list after GD (× X)', 'num', 0.5],
       ['gdInviteMult', 'GD invitations (× the roles\' usual shortlists added together)', 'num', 0.5, 'One GD per company: everyone who applied to any of its roles is screened once; at least one full group is always called'],
@@ -637,14 +639,14 @@
     ]],
     ['Optimiser', [
       ['planBuffer', 'Interview buffer on expected need (×)', 'num', 0.05], ['targetWindow', 'Target interviewing window (min)', 'num', 10],
-      ['openFromPrefs', 'Opening time from preferences (1 = on, 0 = tier rule)', 'num', 1, 'A firm opens once its candidates who are free of interviews with firms they rank higher are worth one hotlisted candidate per panel'],
-      ['shortlistWeight', 'Opening rule: a shortlisted candidate counts as this share of a hotlisted one', 'pct', null, 'At 33%, N panels open on N free hotlisted candidates or 3N free shortlisted ones'],
+      ['openFromPrefs', 'Opening time from preferences (1 = on, 0 = tier rule)', 'num', 1, 'A firm opens once its candidates who are free of interviews with firms they rank higher are worth one preferred candidate per panel'],
+      ['shortlistWeight', 'Opening rule: a standard-list candidate counts as this share of a preferred one', 'pct', null, 'At 33%, N panels open on N free preferred candidates or 3N free standard-list ones'],
       ['laterOpenMid', 'Tier rule only: middle-preference firms open after (min)', 'num', 10], ['laterOpenLow', 'Tier rule only: low-preference firms open after (min)', 'num', 10],
       ['prefBeta', 'Weight on student preference in matching', 'num', 0.5], ['lookAhead', 'Look-ahead window (min)', 'num', 1], ['lookAheadPenalty', 'Look-ahead penalty', 'pct'],
       ['holdUrgency', 'Hold urgency weight', 'num', 0.1], ['idleBonus', 'Idle panel bonus per minute', 'num', 0.005],
-      ['planImprove', 'Improvement phase on the plan (1 = on)', 'num', 1, 'Savings for noon handovers, earlier openings and panel relocations after the greedy plan, all inside each wing'],
-      ['minimiseWings', 'Free whole wings when the plan allows (1 = on)', 'num', 1, 'Each role stays in one wing; the optimised plan then drops wings one at a time while its cost stays within the slack below'],
-      ['wingSlack', 'Extra plan cost accepted to free a wing', 'pct', null, 'Share of the plan cost with every wing in use; 2% by default'],
+      ['planImprove', 'Improvement phase on the plan (1 = on)', 'num', 1, 'Savings for noon handovers, earlier openings and panel relocations after the greedy plan, all inside each block'],
+      ['minimiseWings', 'Free whole blocks when the plan allows (1 = on)', 'num', 1, 'Each role stays in one block; the optimised plan then drops blocks one at a time while its cost stays within the slack below'],
+      ['wingSlack', 'Extra plan cost accepted to free a block', 'pct', null, 'Share of the plan cost with every block in use; 2% by default'],
       ['earlyPenalty', 'Cost of opening a firm before its tier time (per hire-minute)', 'num', 1, 'Higher values make the improvement phase reluctant to open less-preferred firms early'],
     ]],
   ];
@@ -700,32 +702,32 @@
     const rows = decisionRows(d);
     const wantPanels = d.firms.reduce((a, f) => a + Math.max(1, Math.ceil(f.expInt * (f.meanDur) / P.targetWindow)), 0);
     let html = '<div class="totals">' +
-      [['Cluster ' + k, d.firms.length + ' roles · ' + d.hires + ' hires'], ['Student pool', d.pool + ' students' + (d.poolNoOffer != null ? ' (' + d.poolNoOffer + ' with no offer yet, ' + d.poolDreamers + ' dreaming in)' : '')], ['Rooms', d.plannedRooms + ' planned + ' + d.bufferRooms + ' buffer in ' + P.wings + ' wings'], ['Run uses', MODE_NAME[sim.mode] + ' plan']]
+      [['Cluster ' + k, d.firms.length + ' roles · ' + d.hires + ' hires'], ['Student pool', d.pool + ' students' + (d.poolNoOffer != null ? ' (' + d.poolNoOffer + ' with no offer yet, ' + d.poolDreamers + ' dreaming in)' : '')], ['Rooms', d.plannedRooms + ' planned + ' + d.bufferRooms + ' buffer in ' + P.wings + ' blocks'], ['Run uses', MODE_NAME[sim.mode] + ' plan']]
         .map(c => '<div class="counter"><div class="v">' + c[0] + '</div><div class="k">' + c[1] + '</div></div>').join('') + '</div>';
     html += '<div class="card"><h3>Cluster decisions</h3><p class="muted">Stage 1 put these cohorts in cluster ' + k + ': ' + d.cohorts.map(esc).join(', ') + '.</p>' +
       '<table class="data" style="max-width:980px"><thead><tr><th>Decision</th>' + d.modes.map(m => '<th class="num">' + MODE_NAME[m] + (m === sim.mode ? ' (in use)' : '') + '</th>').join('') + '</tr></thead><tbody>' +
       rows.map(([lab, fn]) => '<tr><td>' + lab + '</td>' + d.modes.map(m => '<td class="num">' + fn(d.summary[m], m) + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
-    html += '<p class="muted" style="margin-top:8px">Plan cost weights each firm\'s planned finish by its hires (the objective of Smith\'s rule). The lower bound relaxes the room constraints: every firm runs its maximum panels (a third of its list, at most one wing) from its best opening time up to its release date, so no feasible plan can cost less. Lower bound for this cluster: ' + Math.round(d.lowerBound / 60).toLocaleString('en-IN') + ' hire-hours.</p>';
-    if (wantPanels > d.plannedRooms) html += '<div class="note">Rooms are the binding constraint in this cluster. To finish each firm within the ' + P.targetWindow + '-minute target window the firms would need about <b>' + wantPanels + ' panels</b>, but there are ' + d.plannedRooms + ' planned rooms, so most firms get a single panel and the largest ones run into the evening. More wings or planned rooms, or a longer target window, relax this (try it on the Assumptions tab).</div>';
+    html += '<p class="muted" style="margin-top:8px">Plan cost weights each firm\'s planned finish by its hires (the objective of Smith\'s rule). The lower bound relaxes the room constraints: every firm runs its maximum panels (a third of its list, at most one block) from its best opening time up to its release date, so no feasible plan can cost less. Lower bound for this cluster: ' + Math.round(d.lowerBound / 60).toLocaleString('en-IN') + ' hire-hours.</p>';
+    if (wantPanels > d.plannedRooms) html += '<div class="note">Rooms are the binding constraint in this cluster. To finish each firm within the ' + P.targetWindow + '-minute target window the firms would need about <b>' + wantPanels + ' panels</b>, but there are ' + d.plannedRooms + ' planned rooms, so most firms get a single panel and the largest ones run into the evening. More blocks or planned rooms, or a longer target window, relax this (try it on the Assumptions tab).</div>';
     html += '</div>';
     $('#decSummary').innerHTML = html;
     // opening schedule for the chosen mode
     const match = (f) => !q || (f.company + ' ' + f.role).toLowerCase().includes(q);
     const F = d.firms.filter(match).slice().sort((a, b) => a.plans[mode].open - b.plans[mode].open || b.pop - a.pop);
     const groups = new Map(); F.forEach(f => { const t = f.plans[mode].open; if (!groups.has(t)) groups.set(t, []); groups.get(t).push(f); });
-    $('#decScheduleNote').textContent = MODE_NAME[mode] + ' plan for cluster ' + k + ': who opens when, with how many panels and in which rooms. ' + (P.openFromPrefs ? 'A student is free for a firm once they are likely to have finished every interview with a firm they rank higher. A free hotlisted candidate counts 1 and a free shortlisted candidate ' + Math.round(P.shortlistWeight * 100) + '% of that; a firm opens at the first half-hour by which its free candidates add up to one hotlist-equivalent per panel.' : '') + ' Room numbers count from 1 within each wing; rooms ' + (P.roomsPerWingPlanned + 1) + '–' + (P.roomsPerWingPlanned + P.roomsPerWingBuffer) + ' are the buffer.';
+    $('#decScheduleNote').textContent = MODE_NAME[mode] + ' plan for cluster ' + k + ': who opens when, with how many panels and in which rooms. ' + (P.openFromPrefs ? 'A student is free for a firm once they are likely to have finished every interview with a firm they rank higher. A free preferred candidate counts 1 and a free standard-list candidate ' + Math.round(P.shortlistWeight * 100) + '% of that; a firm opens at the first half-hour by which its free candidates add up to one preferred-candidate equivalent per panel.' : '') + ' Room numbers count from 1 within each block; rooms ' + (P.roomsPerWingPlanned + 1) + '–' + (P.roomsPerWingPlanned + P.roomsPerWingBuffer) + ' are the buffer.';
     const why = (f, p) => {
       if (mode === 'baseline') return 'Everyone opens at 8:00 am';
       if (f.release == null) return 'Tier rule by popularity';
       if (p.open > f.release) return 'Free from ' + PS.fmtTime(f.release) + '; first free room at ' + PS.fmtTime(p.open);
       const r1 = (x) => Math.round(x * 10) / 10;
-      if (f.release === 0) return 'Free at 8:00: ' + f.hotAt8 + ' hotlisted + ' + f.shortAt8 + ' shortlisted = ' + r1(f.readyAt8) + ' hotlist-equivalents; needs ' + r1(f.need);
-      return 'Free at 8:00: ' + f.hotAt8 + ' hotlisted + ' + f.shortAt8 + ' shortlisted = ' + r1(f.readyAt8) + '; needs ' + r1(f.need) + ', reached by ' + PS.fmtTime(f.release);
+      if (f.release === 0) return 'Free at 8:00: ' + f.hotAt8 + ' preferred + ' + f.shortAt8 + ' standard-list = ' + r1(f.readyAt8) + ' preferred-candidate equivalents; needs ' + r1(f.need);
+      return 'Free at 8:00: ' + f.hotAt8 + ' preferred + ' + f.shortAt8 + ' standard-list = ' + r1(f.readyAt8) + '; needs ' + r1(f.need) + ', reached by ' + PS.fmtTime(f.release);
     };
     let sch = '<thead><tr><th>Opens</th><th>Firm and role</th><th class="num">Target X</th><th>Shortlist</th><th class="num">Expected interviews</th><th class="num">Panels</th><th>Rooms</th><th class="num">Planned finish</th><th>Why this opening time</th></tr></thead><tbody>';
     for (const [t, list] of groups) {
       sch += '<tr class="grp"><td colspan="9">' + PS.fmtTime(t) + ' · ' + list.length + ' firm' + (list.length > 1 ? 's' : '') + ' · ' + list.reduce((a, f) => a + f.plans[mode].panels, 0) + ' panels</td></tr>';
-      sch += list.map(f => { const p = f.plans[mode]; return '<tr><td class="num">' + PS.fmtTime(p.open) + '</td><td><span class="swatch" style="background:' + PS.firmColor(f.company) + '"></span>' + esc(f.label) + '</td><td class="num">' + f.X + '</td><td>' + f.strategy + ' · ' + f.hot + ' hot / ' + f.list + '</td><td class="num">' + f.expInt + '</td><td class="num">' + p.panels + '</td><td>' + PS.roomsText(p.rooms, p.open) + '</td><td class="num' + (p.close > P.softStop ? ' warn' : '') + '">' + fmtFinish(p.close) + '</td><td class="muted">' + why(f, p) + '</td></tr>'; }).join('');
+      sch += list.map(f => { const p = f.plans[mode]; return '<tr><td class="num">' + PS.fmtTime(p.open) + '</td><td><span class="swatch" style="background:' + PS.firmColor(f.company) + '"></span>' + esc(f.label) + '</td><td class="num">' + f.X + '</td><td>' + f.strategy + ' · ' + f.hot + ' preferred / ' + f.list + '</td><td class="num">' + f.expInt + '</td><td class="num">' + p.panels + '</td><td>' + PS.roomsText(p.rooms, p.open) + '</td><td class="num' + (p.close > P.softStop ? ' warn' : '') + '">' + fmtFinish(p.close) + '</td><td class="muted">' + why(f, p) + '</td></tr>'; }).join('');
     }
     $('#decSchedule').innerHTML = sch + '</tbody>';
     // firm-by-firm comparison
@@ -738,7 +740,7 @@
     };
     const cell = (p) => '<td class="num sep">' + PS.fmtTime(p.open) + '</td><td class="num">' + p.panels + '</td><td>' + PS.roomsText(p.rooms, p.open) + '</td><td class="num' + (p.close > P.softStop ? ' warn' : '') + '">' + fmtFinish(p.close) + '</td>';
     const all = d.firms.filter(match).slice().sort((a, b) => b.pop - a.pop);
-    $('#decTable').innerHTML = '<thead><tr><th>Firm and role</th><th>Cohort</th><th class="num">Popularity</th><th>List strategy</th><th class="num">Target X</th><th class="num">Hot / list</th><th class="num">Applicants</th><th class="num">Expected interviews</th>' +
+    $('#decTable').innerHTML = '<thead><tr><th>Firm and role</th><th>Cohort</th><th class="num">Popularity</th><th>List strategy</th><th class="num">Target X</th><th class="num">Preferred / shortlist</th><th class="num">Applicants</th><th class="num">Expected interviews</th>' +
       ['Baseline'].concat(['Optimised']).concat(hasMan ? ['Manual'] : []).map(n => '<th class="num sep">' + n + ' opens</th><th class="num">Panels</th><th>Rooms</th><th class="num">Finish</th>').join('') + '<th>Optimised vs baseline</th></tr></thead><tbody>' +
       all.map(f => '<tr><td><span class="swatch" style="background:' + PS.firmColor(f.company) + '"></span>' + esc(f.label) + '</td><td>' + esc(f.cohort) + '</td><td class="num">' + f.pop + '</td><td>' + f.strategy + '</td><td class="num">' + f.X + '</td><td class="num">' + f.hot + ' / ' + f.list + '</td><td class="num">' + f.applicants + '</td><td class="num">' + f.expInt + '</td>' +
         cell(f.plans[B]) + cell(f.plans[O]) + (hasMan ? cell(f.plans.manual) : '') + '<td class="chg">' + change(f) + '</td></tr>').join('') + '</tbody>';
@@ -749,19 +751,19 @@
   $('#btnDecCsv').addEventListener('click', () => {
     const lines = [];
     const q = (v) => '"' + String(v).replace(/"/g, '""') + '"';
-    lines.push(['Cluster', 'Company', 'Role', 'Cohort', 'Popularity', 'List strategy', 'Target X', 'Hotlist', 'List', 'Applicants', 'Expected interviews', 'Mode', 'Opens', 'Panels', 'Rooms', 'Planned finish'].map(q).join(','));
+    lines.push(['Cluster', 'Company', 'Role', 'Cohort', 'Popularity', 'List strategy', 'Target X', 'Preferred list', 'Shortlist', 'Applicants', 'Expected interviews', 'Mode', 'Opens', 'Panels', 'Rooms', 'Planned finish'].map(q).join(','));
     for (const k of Object.keys(sim.decisions)) { const d = sim.decisions[k]; for (const f of d.firms) for (const m of d.modes) { const p = f.plans[m]; lines.push([k, f.company, f.role, f.cohort, f.pop, f.strategy, f.X, f.hot, f.list, f.applicants, f.expInt, MODE_NAME[m], PS.fmtTime(p.open), p.panels, PS.roomsText(p.rooms, p.open), fmtFinish(p.close)].map(q).join(',')); } }
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); a.download = 'pre-cluster-decisions.csv'; a.click();
   });
 
   // ------------------------------------------------------------------ sensitivity analysis
   const SENS_OUT = [
-    ['filledPct', 'Firms that filled X (%)', 1, true], ['top10', 'Placed at rank 1 or top 10% of list', 0, true], ['below50', 'Placed below 50% of list', 0, true],
-    ['wasted', 'Wasted interviews', 0, true], ['lost', 'Hires lost (released holds + dreams)', 0, true], ['idle', 'Panel idle hours', 0, true],
+    ['filledPct', 'Firms that filled X (%)', 1, true], ['top10', 'Placed in the top 10% of their preferences', 0, true], ['below50', 'Placed below 50% of their preferences', 0, true],
+    ['totalLoss', 'Offer losses: total', 0, true], ['rejected', 'Offer losses: rejected', 0, false], ['holdLoss', 'Offer losses: holds', 0, false], ['dreamLoss', 'Offer losses: dreams', 0, false], ['util', 'Panel utilisation (%)', 1, true],
     ['buffer', 'Buffer room openings', 0, true], ['endAvg', 'Average time the last firm left', 'clock', true],
     ['placed', 'Students placed', 0, false], ['unplaced', 'Students left unplaced', 0, false], ['dreamConv', 'Dream conversions', 0, false],
-    ['interviews', 'Interviews held', 0, false], ['rank1', 'Placed at rank 1', 0, false], ['gross1', 'Gross offers, cluster 1', 0, false], ['gross2', 'Gross offers, cluster 2', 0, false],
-    ['gross3', 'Gross offers, cluster 3', 0, false], ['peakRooms', 'Peak rooms in use', 0, false], ['extensions', 'Shortlist extensions', 0, false], ['lostHolds', 'Hires lost to released holds', 0, false],
+    ['interviews', 'Interviews held', 0, false], ['rank1', 'Placed in their top preference', 0, false], ['gross1', 'Gross offers, cluster 1', 0, false], ['gross2', 'Gross offers, cluster 2', 0, false],
+    ['gross3', 'Gross offers, cluster 3', 0, false], ['peakRooms', 'Peak rooms in use', 0, false], ['extensions', 'Shortlist extensions', 0, false], ['idleMinPerRole', 'Idle panel minutes per role', 0, false],
     ['gdEnd', 'Last GD finished (mean of the two GD days)', 'clock', false], ['gdWait', 'GD group-minutes lost to clashes', 0, false],
   ];
   const SENS_COLORS = { baseline: '#c26a1b', optimised: '#1f5fbf', manual: '#2f9e6b' };
@@ -877,7 +879,7 @@
   // ------------------------------------------------------------------ firms
   const FIRM_COLS = [
     ['X', 'Target X', 'num'], ['pop', 'Popularity', 'num'], ['strategy', 'List strategy', 'sel', ['auto', 'confident', 'competing', 'defensive']],
-    ['hotMult', 'Hotlist ×X', 'num', 'blank'], ['listMult', 'List ×X', 'num', 'blank'], ['inter', 'Interactions', 'sel', [1, 2]],
+    ['hotMult', 'Preferred list ×X', 'num', 'blank'], ['listMult', 'Shortlist ×X', 'num', 'blank'], ['inter', 'Interactions', 'sel', [1, 2]],
     ['i1min', 'Int 1 min', 'num'], ['i1max', 'Int 1 max', 'num'], ['i2min', 'Int 2 min', 'num'], ['i2max', 'Int 2 max', 'num'],
     ['late', 'Late slot', 'chk'], ['manualOpen', 'Manual open', 'txt'], ['manualPanels', 'Manual panels', 'num', 'blank'],
     ['gd', 'GD (clusters 2–3)', 'chk'], ['gdLen', 'GD min', 'num'], ['gdMin', 'GD size min', 'num', 'blank'], ['gdMax', 'GD size max', 'num', 'blank'],
@@ -968,6 +970,8 @@
   $('#firmCluster').addEventListener('change', renderFirms);
   $('#firmSearch').addEventListener('input', renderFirms);
   $('#btnApplyFirms').addEventListener('click', () => { persist(); newSim(); goSim(); });
+  $('#btnHideNames').textContent = PS.namesHidden ? 'Show firm names' : 'Hide firm names';
+  $('#btnHideNames').addEventListener('click', () => { try { localStorage.setItem('ps-hide-names', PS.namesHidden ? '0' : '1'); } catch (e) { /* no storage */ } location.reload(); });
   $('#btnResetFirms').addEventListener('click', () => { const st = state.overrides.__students; state.overrides = st ? { __students: st } : {}; persist(); renderFirms(); newSim(); });
 
   // ------------------------------------------------------------------ student roster (add, edit, remove students)
@@ -1047,7 +1051,7 @@
     if (!has) { $('#gdEmpty').textContent = sim.P.gdOn ? 'The first GD day is held after cluster 1 ends. Run the simulation into cluster 2 (Skip day gets there quickly) and come back here.' : 'Group discussions are switched off on the Assumptions tab.'; return; }
     const k = +sel.value, g = sim.gdDays[k], P = sim.P, mode = $('#gdMode').value, lb = g.lowerBound;
     const inv = g.companies.reduce((a, c) => a + c.invited, 0), R = P.wings * P.gdRoomsPerWing;
-    const binding = lb.value === lb.byStudent ? 'the busiest student\'s own GDs back to back' : lb.value === lb.byFirm ? 'the longest company block' : 'total GD work over ' + R + ' rooms';
+    const binding = lb.value === lb.byStudent ? 'the busiest student\'s own GDs back to back' : lb.value === lb.byFirm ? 'the longest company sitting' : 'total GD work over ' + R + ' rooms';
     const rows = [
       ['Companies holding GDs · invitations', () => g.companies.length + ' · ' + inv],
       ['Most GDs for one student', () => lb.maxGdsPerStudent],
@@ -1056,7 +1060,7 @@
       ['Lower bound on the last finish (' + binding + ')', () => PS.fmtTime(Math.ceil(lb.value))],
       ['Gap to the lower bound', x => Math.max(0, Math.round(x.end - lb.value)) + ' min'],
       ['Companies given two panels', x => x.twoPanel],
-      ['Panelist idle hours (a panel waiting while its company is still running)', x => Math.round(x.panelIdle / 60)],
+      ['GD panel utilisation (share of panel time with a group in the room)', x => Math.round(x.util || 0) + '%'],
       ['Late (buffer) GDs timetabled after ' + PS.fmtTime(P.gdLatestStart) + ' · with two panels', x => x.latePlanned + ' · ' + (x.lateTwoPanel || 0)],
       ['Companies actually starting after ' + PS.fmtTime(P.gdLatestStart) + ' (planned, or pushed late by overruns)', x => x.lateActual],
       ['Groups held up because a member was still in another GD', x => x.clashGroups],
@@ -1064,18 +1068,18 @@
       ['Groups running past ' + PS.fmtTime(P.gdDayEnd), x => x.lateGroups],
       ['GD room-hours used (of ' + R + ' rooms)', x => Math.round(x.roomHours)],
     ];
-    $('#gdSummary').innerHTML = '<div class="card"><h3>GD day before cluster ' + k + '</h3><table class="data"><thead><tr><th>Measure</th><th class="num">Baseline (fixed blocks)</th><th class="num">Optimised (timetabled blocks)</th></tr></thead><tbody>' +
+    $('#gdSummary').innerHTML = '<div class="card"><h3>GD day before cluster ' + k + '</h3><table class="data"><thead><tr><th>Measure</th><th class="num">Baseline (fixed sittings)</th><th class="num">Optimised (timetabled blocks)</th></tr></thead><tbody>' +
       rows.map(([l, fn]) => '<tr><td>' + l + '</td><td class="num">' + fn(g.baseline) + '</td><td class="num">' + fn(g.optimised) + '</td></tr>').join('') + '</tbody></table>' +
-      '<p class="muted">In both timetables a company runs its GDs as one block in one wing, with one or two panels in that wing\'s syndicate rooms, and the next company may use a room only ' + P.gdSwitch + ' minutes after the last group there ends. ' +
-      'Baseline is today\'s practice: any company with two or more groups gets two panels; companies are timetabled in popularity order, and the next company in a room is timetabled ' + Math.round(P.gdBuffer / 60 * 10) / 10 + ' hours after the block was due to end (squeezed to the ' + P.gdSwitch + '-minute gap if that would start it after ' + PS.fmtTime(P.gdLatestStart) + '). Groups are made in list order and dealt to the panels in turn, so a panel waits whenever one of its members is still in another company\'s GD, and with an odd number of groups one panel sits idle at the end. ' +
-      'Optimised gives a company two panels only when its invitees split into an even number of groups within the size limits, so both panels run the same number of rounds. The timetable is built by greedy insertion from several company orders (most-loaded students first, shortest block first, longest block first, largest company first, and shuffles), keeping the best order. Starting after ' + PS.fmtTime(P.gdLatestStart) + ' is allowed but undesirable, like a buffer room: the timetable first keeps the number of such late (buffer) GDs as low as it can, then takes the earliest finish plus a reputation term (mean start time weighted towards the most popular companies, times ' + P.gdPopWeight + '), so names like TAS or Aditya Birla open first. If no order fits by ' + PS.fmtTime(P.gdLatestStart) + ', late companies are moved to the front and the rounds are packed tighter; a company that still has to start late runs two panels, so it is over quickly (one panel only if its invitees make a single group). Late GDs are flagged in the table below. Each company takes the earliest slot at which a wing is free and every invitee fits into one of its rounds without a clash (students are matched to rounds by augmenting paths). Rounds are spaced at the mean GD length plus one standard deviation, so overruns rarely hold anyone up. ' +
+      '<p class="muted">In both timetables a company runs its GDs as one sitting in one block, with one or two panels in that block\'s syndicate rooms, and the next company may use a room only ' + P.gdSwitch + ' minutes after the last group there ends. ' +
+      'Baseline is today\'s practice: any company with two or more groups gets two panels; companies are timetabled in popularity order, and the next company in a room is timetabled ' + Math.round(P.gdBuffer / 60 * 10) / 10 + ' hours after the sitting was due to end (squeezed to the ' + P.gdSwitch + '-minute gap if that would start it after ' + PS.fmtTime(P.gdLatestStart) + '). Groups are made in list order and dealt to the panels in turn, so a panel waits whenever one of its members is still in another company\'s GD, and with an odd number of groups one panel sits idle at the end. ' +
+      'Optimised gives a company two panels only when its invitees split into an even number of groups within the size limits, so both panels run the same number of rounds. The timetable is built by greedy insertion from several company orders (most-loaded students first, shortest sitting first, longest sitting first, largest company first, and shuffles), keeping the best order. Starting after ' + PS.fmtTime(P.gdLatestStart) + ' is allowed but undesirable, like a buffer room: the timetable first keeps the number of such late (buffer) GDs as low as it can, then takes the earliest finish plus a reputation term (mean start time weighted towards the most popular companies, times ' + P.gdPopWeight + '), so the most sought-after companies open first. If no order fits by ' + PS.fmtTime(P.gdLatestStart) + ', late companies are moved to the front and the rounds are packed tighter; a company that still has to start late runs two panels, so it is over quickly (one panel only if its invitees make a single group). Late GDs are flagged in the table below. Each company takes the earliest slot at which a block is free and every invitee fits into one of its rounds without a clash (students are matched to rounds by augmenting paths). Rounds are spaced at the mean GD length plus one standard deviation, so overruns rarely hold anyone up. ' +
       'The timetable does not change who is selected: GD performance is drawn once per student and company, so both timetables give the same post-GD lists.</p></div>';
     // Gantt
     const x = g[mode], end = Math.max(g.baseline.end, g.optimised.end, P.gdDayEnd * 0 + 240), t1 = Math.ceil((end + 20) / 60) * 60;
     const W = 1100, L = 120, top = 24, rh = 22, H = top + R * rh + 26, sx = t => L + (W - L - 10) * t / t1;
     let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="min-width:760px;font:11px system-ui,sans-serif">';
     for (let t = 0; t <= t1; t += 60) svg += '<line x1="' + sx(t) + '" x2="' + sx(t) + '" y1="' + (top - 4) + '" y2="' + (H - 18) + '" stroke="#8884" /><text x="' + sx(t) + '" y="14" text-anchor="middle" fill="currentColor">' + PS.fmtTime(t).replace(':00', '') + '</text>';
-    for (let w = 0; w < P.wings; w++) for (let j = 0; j < P.gdRoomsPerWing; j++) { const r = w * P.gdRoomsPerWing + j, y = top + r * rh; svg += '<text x="4" y="' + (y + 15) + '" fill="currentColor">Wing ' + PS.wingLabel(w) + ' · syndicate ' + (j + 1) + '</text><line x1="' + L + '" x2="' + (W - 10) + '" y1="' + (y + rh) + '" y2="' + (y + rh) + '" stroke="#8882"/>'; }
+    for (let w = 0; w < P.wings; w++) for (let j = 0; j < P.gdRoomsPerWing; j++) { const r = w * P.gdRoomsPerWing + j, y = top + r * rh; svg += '<text x="4" y="' + (y + 15) + '" fill="currentColor">Block ' + PS.wingLabel(w) + ' · syndicate ' + (j + 1) + '</text><line x1="' + L + '" x2="' + (W - 10) + '" y1="' + (y + rh) + '" y2="' + (y + rh) + '" stroke="#8882"/>'; }
     for (const gr of x.groups) {
       const r = gr.wing * P.gdRoomsPerWing + gr.slot, y = top + r * rh + 3, x0 = sx(gr.start), w = Math.max(1, sx(gr.end) - x0);
       svg += '<g><title>' + esc(gr.comp) + ': ' + PS.fmtTime(gr.start) + '–' + PS.fmtTime(Math.round(gr.end)) + ', ' + gr.size + ' students</title><rect x="' + x0 + '" y="' + y + '" width="' + w + '" height="' + (rh - 6) + '" rx="3" fill="' + PS.firmColor(gr.comp) + '" stroke="#0006" stroke-width="0.5"/>' +
@@ -1085,13 +1089,13 @@
     const lbx = sx(Math.ceil(lb.value)); svg += '<line x1="' + lbx + '" x2="' + lbx + '" y1="' + top + '" y2="' + (H - 18) + '" stroke="#2f9e6b" stroke-dasharray="4 3"/><text x="' + lbx + '" y="' + (H - 4) + '" text-anchor="middle" fill="#2f9e6b">lower bound</text>';
     svg += '</svg>';
     $('#gdGantt').innerHTML = svg;
-    $('#gdGanttNote').textContent = (mode === 'baseline' ? 'Baseline fixed-block timetable' : 'Optimised timetable') + '. Each bar is one group; hover for the company, times and group size. The green dashed line is the lower bound. Both timetables share the same time axis.';
+    $('#gdGanttNote').textContent = (mode === 'baseline' ? 'Baseline fixed-sitting timetable' : 'Optimised timetable') + '. Each bar is one group; hover for the company, times and group size. The green dashed line is the lower bound. Both timetables share the same time axis.';
     // table
     const by = (m) => new Map(g[m].perComp.map(c => [c.name, c]));
     const B = by('baseline'), O = by('optimised');
     const span = (c) => c && c.start != null ? PS.fmtTime(c.start) + '–' + PS.fmtTime(Math.round(c.end)) : '–';
     const roleOf = (lab, comp) => lab.startsWith(comp + ' – ') ? lab.slice(comp.length + 3) : lab;
-    $('#gdTable').innerHTML = '<thead><tr><th>Company</th><th class="num">Applied to any role</th><th class="num">Called to GD</th><th class="num">GD length</th><th class="num">Group size</th><th class="num">Groups</th><th>Baseline block (planned)</th><th>Baseline actual</th><th>Optimised</th><th class="num">Panels: base · opt</th><th class="num">Wing (opt.)</th><th class="num">Panelist idle (opt., min)</th><th>Each role: usual CV shortlist → interview list after GD</th></tr></thead><tbody>' +
+    $('#gdTable').innerHTML = '<thead><tr><th>Company</th><th class="num">Applied to any role</th><th class="num">Called to GD</th><th class="num">GD length</th><th class="num">Group size</th><th class="num">Groups</th><th>Baseline sitting (planned)</th><th>Baseline actual</th><th>Optimised</th><th class="num">Panels: base · opt</th><th class="num">Block (opt.)</th><th class="num">Panelist idle (opt., min)</th><th>Each role: usual CV shortlist → interview list after GD</th></tr></thead><tbody>' +
       g.companies.slice().sort((a, b) => b.invited - a.invited).map(c => { const b = B.get(c.name), o = O.get(c.name);
         return '<tr><td><span class="swatch" style="background:' + PS.firmColor(c.name) + '"></span>' + esc(c.name) + '</td><td class="num">' + (c.pool || '–') + '</td><td class="num">' + c.invited + '</td><td class="num">' + c.len + ' min</td><td class="num">' + c.min + '–' + c.max + '</td><td class="num">' + (o ? o.groups : '–') + '</td><td>' + (b && b.plannedStart != null ? PS.fmtTime(b.plannedStart) + '–' + PS.fmtTime(b.plannedEnd) : '–') + '</td><td>' + span(b) + (b && b.late ? ' <span class="tag late">late buffer</span>' : '') + '</td><td>' + span(o) + (o && o.late ? ' <span class="tag late">late buffer</span>' : '') + '</td><td class="num">' + (b ? b.panels : '–') + ' · ' + (o ? o.panels : '–') + '</td><td class="num">' + (o && o.wing != null ? PS.wingLabel(o.wing) : '–') + '</td><td class="num">' + (o ? o.idle : '–') + '</td><td class="muted">' +
           c.after.map(a => esc(roleOf(a.label, c.name)) + ': ' + a.cv + ' → ' + a.gd).join('<br>') + '</td></tr>'; }).join('') + '</tbody>';
@@ -1099,7 +1103,7 @@
   $('#gdCluster').addEventListener('change', renderGd);
   $('#gdMode').addEventListener('change', renderGd);
   $('#btnGdCsv').addEventListener('click', () => {
-    const q = v => '"' + String(v).replace(/"/g, '""') + '"'; const lines = [['GD day before cluster', 'Timetable', 'Company', 'Wing', 'GD room', 'Start', 'End', 'Students'].map(q).join(',')];
+    const q = v => '"' + String(v).replace(/"/g, '""') + '"'; const lines = [['GD day before cluster', 'Timetable', 'Company', 'Block', 'GD room', 'Start', 'End', 'Students'].map(q).join(',')];
     for (const k of Object.keys(sim.gdDays || {})) for (const m of ['baseline', 'optimised']) for (const gr of sim.gdDays[k][m].groups) lines.push([k, MODE_NAME[m], gr.comp, PS.wingLabel(gr.wing), gr.slot + 1, PS.fmtTime(gr.start), PS.fmtTime(Math.round(gr.end)), gr.size].map(q).join(','));
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); a.download = 'gd-timetables.csv'; a.click();
   });
@@ -1150,19 +1154,19 @@
 
   // ------------------------------------------------------------------ about
   $('#aboutText').innerHTML = `
-    <p>This tool simulates three days of final placements: 400 students, 234 roles from 161 companies across three clusters, and interview rooms in nine wings on three floors: wings 2 and 3 on the ground floor, 6, 7 and 8 on the first floor, and 9, 10, 11 and 12 on the second floor (each with 10 planned rooms and 4 buffer rooms by default). Students wait in PP Gupta Auditorium. When a panel calls them, they walk out to the central tracker and check in (about a minute), then go on to their wing (about another minute), where a Placecom volunteer takes them to the room. After the interview they come back the same way, through the central tracker, with the outcome.</p>
+    <p>This tool simulates three days of final placements: 400 students, 234 roles from 161 companies across three clusters, and interview rooms in nine blocks on three floors: blocks A and B on the ground floor, C, D and E on the first floor, and F, G, H and I on the second floor (each with 10 planned rooms and 4 buffer rooms by default). Students wait in the auditorium. When a panel calls them, they walk out to the central tracker and check in (about a minute), then go on to their block (about another minute), where a placement committee volunteer takes them to the room. After the interview they come back the same way, through the central tracker, with the outcome.</p>
     <h3>Each cluster</h3>
     <p>Students still in the process apply to the cluster's roles and rank them, with ties of up to three. Each firm shortlists from its own applicants, choosing a confident, competing or defensive list size. The night before, a plan fixes each firm's open time, panels and rooms. During the day, offers arrive at the end of each firm's final interaction, and students accept (and wait), hold (on a two-hour clock that pauses during interviews), or reject. Each role's target X counts gross offers: it stops once it has made X offers, whether or not the students keep them, so a rejected offer or a released hold is not replaced (the Assumptions tab can switch back to the earlier net count of accepted plus held offers). A role that runs short of candidates extends its shortlist. At the end of the cluster, holds become accepted and about a third of placed students dream into later clusters, with up to three applications and at most two per cluster.</p>
     <h3>Decisions before each cluster</h3>
     <p>Before each cluster starts, the tool shows the decisions fixed the night before: for every firm, its shortlist, when it opens, how many panels it gets and which rooms, under both today's practice (baseline) and the optimised plan, worked out on the same shortlists. The full list, with an opening schedule by time, is on the Decisions tab and can be downloaded.</p>
     <h3>Group discussion days</h3>
-    <p>Clusters 2 and 3 each have a GD day the day before, from 8 am to ${PS.fmtTime(PS.DEFAULT_PARAMS.gdDayEnd)}, in the two syndicate rooms either side of the Placecom desk at each of the nine wing entrances; the interview rooms inside the wings stay empty. The Simulation tab animates each GD day before its cluster. A firm with a GD screens everyone who applied to any of its roles once and calls ${PS.DEFAULT_PARAMS.gdInviteMult} times the shortlists its roles would otherwise draw (at least one full group); a student not called cannot be interviewed by that firm. Students cannot decline and there is no cap on how many GDs one student attends. Each company runs one GD process across its roles, in groups of 7 to 10, as one block in one wing with one or two panels (its Placecom volunteer stays in that wing); a room passes to the next company only after a ${PS.DEFAULT_PARAMS.gdSwitch}-minute gap. Two panels are given only when both can run the same number of rounds. After the GD each role is one step more confident and draws its hotlist and shortlist from GD attendees who applied to it; if it runs short on the day it extends only to other GD attendees, best GD performance first. Baseline uses fixed company blocks with a three-hour buffer, as today; the optimised timetable inserts companies one at a time at the earliest clash-free slot, matching students to rounds, and keeps the best of several company orders. Starting after ${PS.fmtTime(PS.DEFAULT_PARAMS.gdLatestStart)} is allowed but kept to a minimum, like a buffer room; a company that has to start that late runs two panels so it is over quickly. Popular companies are pulled to the start of the day. The GD tab compares both against a lower bound.</p>
+    <p>Clusters 2 and 3 each have a GD day the day before, from 8 am to ${PS.fmtTime(PS.DEFAULT_PARAMS.gdDayEnd)}, in the two syndicate rooms either side of the placement committee desk at each of the nine block entrances; the interview rooms inside the blocks stay empty. The Simulation tab animates each GD day before its cluster. A firm with a GD screens everyone who applied to any of its roles once and calls ${PS.DEFAULT_PARAMS.gdInviteMult} times the shortlists its roles would otherwise draw (at least one full group); a student not called cannot be interviewed by that firm. Students cannot decline and there is no cap on how many GDs one student attends. Each company runs one GD process across its roles, in groups of 7 to 10, as one sitting in one block with one or two panels (its placement committee volunteer stays in that block); a room passes to the next company only after a ${PS.DEFAULT_PARAMS.gdSwitch}-minute gap. Two panels are given only when both can run the same number of rounds. After the GD each role is one step more confident and draws its preferred list and standard list from GD attendees who applied to it; if it runs short on the day it extends only to other GD attendees, best GD performance first. Baseline uses fixed company sittings with a three-hour buffer, as today; the optimised timetable inserts companies one at a time at the earliest clash-free slot, matching students to rounds, and keeps the best of several company orders. Starting after ${PS.fmtTime(PS.DEFAULT_PARAMS.gdLatestStart)} is allowed but kept to a minimum, like a buffer room; a company that has to start that late runs two panels so it is over quickly. Popular companies are pulled to the start of the day. The GD tab compares both against a lower bound.</p>
     <h3>Sensitivity analysis</h3>
     <p>On the Assumptions tab, pick any input and a range, and the tool runs complete placements at each value and plots how every chosen output moves, for each mode. The small arrow beside each assumption opens it in the sensitivity panel.</p>
     <h3>The three modes</h3>
-    <p><b>Baseline</b> is today's practice: every firm opens at 8 am, panels in proportion to list size, and each free panel calls the next available student on its list. <b>Optimised</b> sizes panels from expected interviews (Little's law), opens less-preferred firms a little later, packs each role into one wing (the wings are bins, filled with room reuse at noon, and whole wings are freed when the plan allows), and on the day matches free students to free panels with the Hungarian algorithm, scoring each pairing by the chance of a hire that sticks per minute of interview (Smith's rule), the student's own preference, a look-ahead for firms they rank higher, and the urgency of any held offer. <b>Manual</b> uses your own open times and panels from the Firms tab.</p>
+    <p><b>Baseline</b> is today's practice: every firm opens at 8 am, panels in proportion to list size, and each free panel calls the next available student on its list. <b>Optimised</b> sizes panels from expected interviews (Little's law), opens less-preferred firms a little later, packs each role into one block (the blocks are bins, filled with room reuse at noon, and whole blocks are freed when the plan allows), and on the day matches free students to free panels with the Hungarian algorithm, scoring each pairing by the chance of a hire that sticks per minute of interview (Smith's rule), the student's own preference, a look-ahead for firms they rank higher, and the urgency of any held offer. <b>Manual</b> uses your own open times and panels from the Firms tab.</p>
     <h3>Methods used</h3>
-    <p>The cohort allocation can be solved as a 0-1 integer programme by LP-based branch and bound (Cohorts tab). Panels are sized by Little's law. Each firm's opening time is computed from the preference lists as a release date: a shortlisted student is free for a firm once they are likely to have finished every interview with a firm they rank higher, a free shortlisted candidate counts as a third of a free hotlisted one (an editable setting), and the firm opens at the first half-hour by which its free candidates add up to one hotlisted candidate per planned panel. The pre-day plan is a bin-packing problem: every role must sit in one wing, so each wing is a bin of ten rooms over the day with a morning and an afternoon shelf. Roles are first assigned to wings by the longest-processing-time rule (largest workload first, to the least-loaded wing that still has a room for it), then each wing is scheduled bottom-left (each firm at its earliest feasible time, panels added up to the Little's-law number) and improved inside the wing: a savings list in the spirit of Clarke and Wright gives rooms that are handed over at noon to the firms that gain most from an extra afternoon panel, an Or-opt style move opens small firms earlier so their room can be handed over, and an Or-opt style relocation moves single panels between firms while the hire-weighted finish time falls. The number of wings is then cut one at a time while the plan's cost stays within a small slack, so whole wings are freed when they are not needed. Every plan is reported against a lower bound obtained by relaxing the room constraints. On the day, the matching of free panels to waiting students is an assignment problem, solved exactly each minute by the Hungarian method.</p>
+    <p>The cohort allocation can be solved as a 0-1 integer programme by LP-based branch and bound (Cohorts tab). Panels are sized by Little's law. Each firm's opening time is computed from the preference lists as a release date: a student on a firm\'s shortlist is free for it once they are likely to have finished every interview with a firm they rank higher, a free standard-list candidate counts as a third of a free preferred one (an editable setting), and the firm opens at the first half-hour by which its free candidates add up to one preferred candidate per planned panel. The pre-day plan is a bin-packing problem: every role must sit in one block, so each block is a bin of ten rooms over the day with a morning and an afternoon shelf. Roles are first assigned to blocks by the longest-processing-time rule (largest workload first, to the least-loaded block that still has a room for it), then each block is scheduled bottom-left (each firm at its earliest feasible time, panels added up to the Little's-law number) and improved inside the block: a savings list in the spirit of Clarke and Wright gives rooms that are handed over at noon to the firms that gain most from an extra afternoon panel, an Or-opt style move opens small firms earlier so their room can be handed over, and an Or-opt style relocation moves single panels between firms while the hire-weighted finish time falls. The number of blocks is then cut one at a time while the plan's cost stays within a small slack, so whole blocks are freed when they are not needed. Every plan is reported against a lower bound obtained by relaxing the room constraints. On the day, the matching of free panels to waiting students is an assignment problem, solved exactly each minute by the Hungarian method.</p>
     <h3>Reading the screen</h3>
     <p>Grey dots are students waiting; white dots are walking; blue are in interviews; amber are holding an offer, with a ring showing the time left on the hold clock; green have accepted; purple are dreaming. Rooms take the colour of the firm using them, and hatched rooms are the buffer. Hover over any student or room for details.</p>
     <h3>Changing the model</h3>

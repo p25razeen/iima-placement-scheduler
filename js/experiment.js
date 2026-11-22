@@ -13,26 +13,27 @@ window.PS = window.PS || {};
     { id: 'optimised', label: 'Optimised plan + optimised matching', plan: 'optimised', match: 'optimised' },
   ];
   PS.METRICS_SEASON = [
-    ['filledPct', 'Roles that reached target X (%)', true], ['top10', 'Placed at rank 1 or top 10%', true], ['below50', 'Placed below 50% of list', true],
-    ['wasted', 'Wasted interviews', true], ['unplaced', 'Students left unplaced', true], ['lostHolds', 'Hires lost to released holds', true], ['endAvg', 'Average time the last firm left', true],
-    ['placed', 'Students placed', false], ['interviews', 'Interviews held', false], ['lost', 'Hires lost (holds + dreams)', false], ['dreamConv', 'Dream conversions', false],
-    ['idle', 'Panel idle hours', false], ['buffer', 'Buffer room openings', false], ['peakRooms', 'Peak rooms in use', false], ['extensions', 'Shortlist extensions', false],
+    ['filledPct', 'Roles that reached target X (%)', true], ['top10', 'Placed in the top 10% of their preferences', true], ['below50', 'Placed below 50% of their preferences', true],
+    ['totalLoss', 'Offer losses: total', true], ['unplaced', 'Students left unplaced', true], ['holdLoss', 'Offer losses: released holds', true], ['endAvg', 'Average time the last firm left', true],
+    ['placed', 'Students placed', false], ['interviews', 'Interviews held', false], ['rejected', 'Offer losses: rejected', false], ['dreamLoss', 'Offer losses: dreams', false], ['dreamConv', 'Dream conversions', false],
+    ['util', 'Panel utilisation (%)', false], ['idleMinPerRole', 'Idle panel minutes per role', false], ['buffer', 'Buffer room openings', false], ['peakRooms', 'Peak rooms in use', false], ['extensions', 'Shortlist extensions', false],
   ];
   PS.METRICS_C1 = [
-    ['filledPct', 'Cluster 1: roles that reached target X (%)', true], ['top10', 'Cluster 1: placed at rank 1 or top 10%', true], ['below50', 'Cluster 1: placed below 50%', true],
-    ['wasted', 'Cluster 1: wasted interviews', true], ['gross', 'Cluster 1: students placed', true], ['lostHolds', 'Cluster 1: hires lost to released holds', true], ['endTime', 'Cluster 1: time the last firm left', true],
-    ['interviews', 'Cluster 1: interviews', false], ['idle', 'Cluster 1: panel idle hours', false], ['buffer', 'Cluster 1: buffer openings', false], ['peakRooms', 'Cluster 1: peak rooms', false],
+    ['filledPct', 'Cluster 1: roles that reached target X (%)', true], ['top10', 'Cluster 1: placed in the top 10% of their preferences', true], ['below50', 'Cluster 1: placed below 50%', true],
+    ['totalLoss', 'Cluster 1: offer losses', true], ['gross', 'Cluster 1: students placed', true], ['holdLoss', 'Cluster 1: offer losses to released holds', true], ['endTime', 'Cluster 1: time the last firm left', true],
+    ['interviews', 'Cluster 1: interviews', false], ['util', 'Cluster 1: panel utilisation (%)', false], ['buffer', 'Cluster 1: buffer openings', false], ['peakRooms', 'Cluster 1: peak rooms', false],
   ];
   // per-cluster measures (keys prefixed c1_, c2_, c3_) and GD-day measures (g2_, g3_), so one season run can be viewed
   // round by round without rerunning
   PS.metricsCluster = (k) => [
     ['c' + k + '_filledPct', 'Cluster ' + k + ': roles that reached target X (%)', true], ['c' + k + '_gross', 'Cluster ' + k + ': students placed', true],
-    ['c' + k + '_top10', 'Cluster ' + k + ': placed at rank 1 or top 10%', true], ['c' + k + '_below50', 'Cluster ' + k + ': placed below 50%', true],
-    ['c' + k + '_wasted', 'Cluster ' + k + ': wasted interviews', true], ['c' + k + '_lostHolds', 'Cluster ' + k + ': hires lost to released holds', true],
+    ['c' + k + '_top10', 'Cluster ' + k + ': placed in the top 10% of their preferences', true], ['c' + k + '_below50', 'Cluster ' + k + ': placed below 50%', true],
+    ['c' + k + '_totalLoss', 'Cluster ' + k + ': offer losses', true], ['c' + k + '_holdLoss', 'Cluster ' + k + ': offer losses to released holds', true],
     ['c' + k + '_endTime', 'Cluster ' + k + ': time the last firm left', true],
     ['c' + k + '_pool', 'Cluster ' + k + ': students in the pool', false], ['c' + k + '_poolNoOffer', 'Cluster ' + k + ': of whom with no offer yet', false], ['c' + k + '_poolDreamers', 'Cluster ' + k + ': of whom placed earlier, dreaming in', false],
     ['c' + k + '_interviews', 'Cluster ' + k + ': interviews', false], ['c' + k + '_offersMade', 'Cluster ' + k + ': offers made', false],
-    ['c' + k + '_dreamConv', 'Cluster ' + k + ': dream conversions into the cluster', false], ['c' + k + '_idle', 'Cluster ' + k + ': panel idle hours', false],
+    ['c' + k + '_rejected', 'Cluster ' + k + ': offer losses, rejected', false], ['c' + k + '_dreamLoss', 'Cluster ' + k + ': offer losses, dreams', false],
+    ['c' + k + '_dreamConv', 'Cluster ' + k + ': dream conversions into the cluster', false], ['c' + k + '_util', 'Cluster ' + k + ': panel utilisation (%)', false],
     ['c' + k + '_buffer', 'Cluster ' + k + ': buffer openings', false], ['c' + k + '_peakRooms', 'Cluster ' + k + ': peak rooms', false],
     ['c' + k + '_extensions', 'Cluster ' + k + ': shortlist extensions', false],
   ];
@@ -40,7 +41,7 @@ window.PS = window.PS || {};
     ['g' + k + '_end', 'GD day before cluster ' + k + ': last GD ends', true], ['g' + k + '_clashWait', 'GD day before cluster ' + k + ': student clash wait (min)', true],
     ['g' + k + '_lateActual', 'GD day before cluster ' + k + ': companies starting after the latest start', true],
     ['g' + k + '_lateGroups', 'GD day before cluster ' + k + ': groups ending after the GD day ends', false],
-    ['g' + k + '_panelIdle', 'GD day before cluster ' + k + ': panelist idle (min)', false], ['g' + k + '_nGroups', 'GD day before cluster ' + k + ': groups', false],
+    ['g' + k + '_util', 'GD day before cluster ' + k + ': GD panel utilisation (%)', false], ['g' + k + '_nGroups', 'GD day before cluster ' + k + ': groups', false],
   ]);
   PS.VIEWS = [['season', 'Whole season'], ['c1', 'Cluster 1'], ['c2', 'Cluster 2'], ['c3', 'Cluster 3'], ['gd', 'GD days']];
   PS.metricsFor = (view) => view === 'season' ? PS.METRICS_SEASON : view === 'gd' ? PS.METRICS_GD : PS.metricsCluster(+view.slice(1));
@@ -48,16 +49,17 @@ window.PS = window.PS || {};
   PS.viewsAvailable = (runs) => PS.VIEWS.filter(([v]) => runs.length && PS.metricsFor(v).every(([m]) => runs.every(r => r.metrics[m] != null)));
   // which way is better, for highlighting
   PS.betterDir = (m) => { const b = m.replace(/^[cg]\d_/, '');
-    if (['filledPct', 'top10', 'placed', 'gross', 'dreamConv'].includes(b)) return 'high';
-    if (['below50', 'wasted', 'unplaced', 'lostHolds', 'lost', 'idle', 'buffer', 'endAvg', 'endTime', 'end', 'clashWait', 'lateActual', 'lateGroups', 'panelIdle'].includes(b)) return 'low';
+    if (['filledPct', 'top10', 'placed', 'gross', 'dreamConv', 'util'].includes(b)) return 'high';
+    if (['below50', 'wasted', 'unplaced', 'lostHolds', 'lost', 'totalLoss', 'rejected', 'holdLoss', 'dreamLoss', 'idleMinPerRole', 'idle', 'buffer', 'endAvg', 'endTime', 'end', 'clashWait', 'lateActual', 'lateGroups', 'panelIdle'].includes(b)) return 'low';
     return null; };
   PS.isClockMetric = (m) => /(^|_)(endAvg|endTime|end)$/.test(m);
   // precision targets (95% half-width of a paired difference) used to size the main run
-  PS.PRECISION = { filledPct: 1.0, top10: 3, below50: 3, wasted: 3, unplaced: 0.5, lostHolds: 2, endAvg: 10, gross: 3, endTime: 10 };
+  PS.PRECISION = { filledPct: 1.0, top10: 3, below50: 3, totalLoss: 3, unplaced: 0.5, holdLoss: 2, endAvg: 10, gross: 3, endTime: 10 };
 
   const c1Metrics = (c) => ({
     filledPct: 100 * c.filled / Math.max(1, c.roles), top10: c.ranks.r1 + c.ranks.top10, below50: c.ranks.rest, wasted: c.wasted, gross: c.grossOffers,
     lostHolds: c.lostHolds, endTime: c.endTime, interviews: c.interviews, idle: c.idleHours, buffer: c.bufferOpenings, peakRooms: c.peakRooms,
+    rejected: c.rejected, holdLoss: c.holdLoss, dreamLoss: c.dreamLoss, totalLoss: c.totalLoss, util: c.util, idleMinPerRole: c.idleMinPerRole,
   });
   const clusterMetrics = (c) => Object.assign(c1Metrics(c), { offersMade: c.offersMade, dreamConv: c.dreamConversions, extensions: c.extensions, pool: c.pool, poolNoOffer: c.poolNoOffer, poolDreamers: c.poolDreamers });
   // adds the per-cluster (c1_ ...) and GD-day (g2_ ...) measures of a finished or partly run simulation to an object
@@ -65,7 +67,7 @@ window.PS = window.PS || {};
     for (const k of [1, 2, 3]) { const c = sim.metrics.clusters[k]; if (!c) continue; const m = clusterMetrics(c); for (const key in m) into['c' + k + '_' + key] = m[key]; }
     const which = sim.planMode === 'baseline' && sim.matchMode === 'baseline' ? 'baseline' : 'optimised';
     for (const k of [2, 3]) { const d = sim.gdDays && sim.gdDays[k] && sim.gdDays[k][which]; if (!d) continue;
-      Object.assign(into, { ['g' + k + '_end']: d.end, ['g' + k + '_clashWait']: d.clashWait, ['g' + k + '_lateActual']: d.lateActual, ['g' + k + '_lateGroups']: d.lateGroups, ['g' + k + '_panelIdle']: Math.round(d.panelIdle), ['g' + k + '_nGroups']: d.nGroups }); }
+      Object.assign(into, { ['g' + k + '_end']: d.end, ['g' + k + '_clashWait']: d.clashWait, ['g' + k + '_lateActual']: d.lateActual, ['g' + k + '_lateGroups']: d.lateGroups, ['g' + k + '_panelIdle']: Math.round(d.panelIdle), ['g' + k + '_util']: d.util, ['g' + k + '_nGroups']: d.nGroups }); }
     return into;
   };
 

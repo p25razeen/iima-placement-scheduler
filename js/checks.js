@@ -103,15 +103,15 @@ window.PS = window.PS || {};
         for (const s of this.students) if (s.status === 'final' && s.offer == null) V('final-without-offer', { student: sname(s) }, {});
         return r;
       });
-      // ---- one wing per role: in every plan, and for the panels actually opened on the day
+      // ---- one block per role: in every plan, and for the panels actually opened on the day
       wrap('makeDecisions', function (orig, a) {
         const r = orig.apply(this, a); const d = this.decisions[this.cluster];
-        if (d) for (const m of d.modes) for (const f of d.firms) { const ws = new Set((f.plans[m].rooms || []).filter(Boolean).map(x => x.wing)); if (ws.size > 1) V('plan-role-in-two-wings (' + m + ')', { firm: f.label, cluster: this.cluster }, { wings: [...ws].map(PS.wingLabel) }); }
+        if (d) for (const m of d.modes) for (const f of d.firms) { const ws = new Set((f.plans[m].rooms || []).filter(Boolean).map(x => x.wing)); if (ws.size > 1) V('plan-role-in-two-blocks (' + m + ')', { firm: f.label, cluster: this.cluster }, { wings: [...ws].map(PS.wingLabel) }); }
         return r;
       });
       wrap('takeRoom', function (orig, a) {
         const r = orig.apply(this, a); const f = a[0]; const ws = new Set(f.panels.map(p => p.room.wing));
-        if (ws.size > 1) V('day-role-in-two-wings', { firm: f.label }, { wings: [...ws].map(PS.wingLabel) });
+        if (ws.size > 1) V('day-role-in-two-blocks', { firm: f.label }, { wings: [...ws].map(PS.wingLabel) });
         return r;
       });
       // ---- GD days: checked on both timetables as soon as they are built
@@ -246,7 +246,7 @@ window.PS = window.PS || {};
       for (const g of gs) for (const id of g.members) { if (seen.has(id)) dup++; seen.add(id); }
       if (dup) V(tag('student-twice-in-company'), { company: c.name, cluster: k }, { dup });
       if (seen.size !== c.invited) V(tag('invitee-not-placed-once'), { company: c.name, cluster: k }, { placed: seen.size, invited: c.invited });
-      const wings = new Set(gs.map(g => g.wing)); if (wings.size > 1) V(tag('company-in-two-wings'), { company: c.name, cluster: k }, { wings: [...wings].map(PS.wingLabel) });
+      const wings = new Set(gs.map(g => g.wing)); if (wings.size > 1) V(tag('company-in-two-blocks'), { company: c.name, cluster: k }, { wings: [...wings].map(PS.wingLabel) });
       const rooms = new Set(gs.map(g => g.wing * 100 + g.slot)); if (rooms.size > P.gdMaxRooms) V(tag('too-many-panels'), { company: c.name, cluster: k }, { rooms: rooms.size });
       for (const g of gs) {
         if (g.size > c.max) V(tag('group-too-large'), { company: c.name, cluster: k }, { size: g.size, max: c.max });
@@ -263,7 +263,7 @@ window.PS = window.PS || {};
         else V(tag('late-gd-one-panel'), { company: c.name, cluster: k }, { plannedStart: PS.fmtTime(pc.plannedStart), groups: pc.groups });
       }
       if (pc && pc.start != null && pc.start > P.gdLatestStart && !(pc.plannedStart > P.gdLatestStart)) E(tag('started-after-latest-start-by-overrun'), { company: c.name, cluster: k }, { start: PS.fmtTime(Math.round(pc.start)), plannedStart: PS.fmtTime(pc.plannedStart) });
-      if (pc && pc.start != null && pc.plannedStart != null && pc.start < pc.plannedStart - eps) V(tag('block-started-before-timetable'), { company: c.name, cluster: k }, {});
+      if (pc && pc.start != null && pc.plannedStart != null && pc.start < pc.plannedStart - eps) V(tag('sitting-started-before-timetable'), { company: c.name, cluster: k }, {});
     }
     for (const [id, gs] of byStudent) {
       gs.sort((a, b) => a.start - b.start);

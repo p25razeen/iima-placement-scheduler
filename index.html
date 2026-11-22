@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Placement Day Simulator · OML</title>
+<title>Recruitment Day Simulator</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
   <div class="brand">
     <div class="logo">P</div>
     <div>
-      <div class="title">Placement Day Simulator</div>
+      <div class="title">Recruitment Day Simulator</div>
       <div class="sub">Interview scheduling across three clusters · Optimization Methods in Logistics</div>
     </div>
   </div>
@@ -112,7 +112,7 @@
   <section id="tab-gd" class="tab">
     <div class="pagehead">
       <h2>Group discussion days</h2>
-      <p>Clusters 2 and 3 each have a GD day the day before. A firm that holds a GD runs one GD process for all its roles: it screens everyone who applied to any of those roles once, and calls twice as many students as its roles' interview shortlists would add up to (at least one full group). The GD is the first cut: a student not called to the GD cannot be interviewed by that firm. After the GD each role draws its hotlist and shortlist from GD attendees who applied to it, and if it runs short on the day it extends only to other GD attendees, best GD performance first. Attendance is compulsory and a student can be invited to any number of GDs, so no student may be in two GDs at once. GDs are held in the two syndicate rooms either side of the Placecom desk at each wing entrance (18 rooms). A company runs its GDs as one block in one wing with one or two panels, because its Placecom volunteer stays in that wing, and a room passes to the next company only after a one-hour gap (editable). No company starts its GDs after 6 pm, and the optimiser pulls the most popular companies to the start of the day (both editable on the Assumptions tab). After the GD each firm is one step more confident: defensive becomes competing, competing becomes confident, and confident cuts its list from 2X to 1.5X. Firms without a GD go straight to their hotlist and shortlist, and extend to any remaining applicant.</p>
+      <p>Clusters 2 and 3 each have a GD day the day before. A firm that holds a GD runs one GD process for all its roles: it screens everyone who applied to any of those roles once, and calls twice as many students as its roles' interview shortlists would add up to (at least one full group). The GD is the first cut: a student not called to the GD cannot be interviewed by that firm. After the GD each role draws its preferred list and standard list from GD attendees who applied to it, and if it runs short on the day it extends only to other GD attendees, best GD performance first. Attendance is compulsory and a student can be invited to any number of GDs, so no student may be in two GDs at once. GDs are held in the two syndicate rooms either side of the placement committee desk at each block entrance (18 rooms). A company runs its GDs as one sitting in one block with one or two panels, because its placement committee volunteer stays in that block, and a room passes to the next company only after a one-hour gap (editable). No company starts its GDs after 6 pm, and the optimiser pulls the most popular companies to the start of the day (both editable on the Assumptions tab). After the GD each firm is one step more confident: defensive becomes competing, competing becomes confident, and confident cuts its list from 2X to 1.5X. Firms without a GD go straight to their preferred list and standard list, and extend to any remaining applicant.</p>
       <div class="row-inline">
         <label>GD day before <select id="gdCluster"></select></label>
         <label>Timetable shown <select id="gdMode"><option value="optimised">Optimised</option><option value="baseline">Baseline</option></select></label>
@@ -274,6 +274,7 @@
         <button id="btnApplyFirms" class="primary">Apply and restart</button>
         <button id="btnRestoreFirms" style="display:none">Restore removed roles</button>
         <button id="btnResetFirms">Clear all firm edits</button>
+        <button id="btnHideNames" title="Show every company under a neutral alias; outcomes do not change">Hide firm names</button>
         <span id="firmDirty" class="muted"></span>
       </div>
     </div>
