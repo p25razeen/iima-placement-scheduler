@@ -2,6 +2,8 @@
 
 **Live site: https://iima-placement-scheduler.netlify.app**
 
+**Report (PDF): [report/Placement_Scheduling_Report.pdf](report/Placement_Scheduling_Report.pdf)**, with the formulations, methods, bounds, experiments and sensitivity analysis behind the simulator.
+
 A browser-based simulator of IIM Ahmedabad summer placements, with four optimisation models for the decisions that shape the season:
 
 | Problem | Decision | Method |
@@ -62,6 +64,7 @@ Each writes `runs.csv`, `runs.json`, `summary.json` and `summary.md` (effects wi
 - `js/checks.js`, `js/stats.js`, `js/experiment.js`, `js/*-worker.js`: rule checks, statistics and batch experiments
 - `tools/experiment.js`: command-line runner
 - `base-settings.json`: the base settings; `netlify.toml`: hosting
+- `report/Placement_Scheduling_Report.pdf`: the project report
 
 ## Deploying
 Static site, no build step. On Netlify, link this repository (publish directory `.`) or drag the folder onto app.netlify.com/drop.
